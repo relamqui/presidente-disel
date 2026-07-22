@@ -482,21 +482,25 @@ async function iniciarRotaOtimizada() {
       }
       
       if (data.code === 'Ok' && data.waypoints) {
-        // waypoints tem a nova ordem.
-        // data.waypoints[0] é o motorista.
+        // Mapeia o índice original (0 é o driver, 1 é validEntregas[0], etc)
+        data.waypoints.forEach((wp, idx) => { wp.original_array_index = idx; });
+        
+        // waypoints tem a nova ordem ditada por waypoint_index
         const order = data.waypoints.slice(1).sort((a,b) => a.waypoint_index - b.waypoint_index);
         
         let newOrderIds = [];
         let googleMapsDirUrl = `https://www.google.com/maps/dir/${lat0},${lng0}`;
         
         for (const wp of order) {
-          // O waypoint_index original do array que enviamos é o wp.original_index (sendo 0 o driver, 1 a primeira entrega etc)
-          const originalIdx = wp.original_index - 1; 
+          const originalIdx = wp.original_array_index - 1; 
           const e = validEntregas[originalIdx];
-          newOrderIds.push(e.id);
-          let mapLat = String(e.latitude).replace(',', '.').trim();
-          let mapLng = String(e.longitude).replace(',', '.').trim();
-          googleMapsDirUrl += `/${mapLat},${mapLng}`;
+          
+          if (e) {
+            newOrderIds.push(e.id);
+            let mapLat = String(e.latitude).replace(',', '.').trim();
+            let mapLng = String(e.longitude).replace(',', '.').trim();
+            googleMapsDirUrl += `/${mapLat},${mapLng}`;
+          }
         }
         
         // Adiciona pro final da fila as entregas que vieram sem coordenadas (se houver)
