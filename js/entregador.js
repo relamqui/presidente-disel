@@ -456,10 +456,22 @@ async function iniciarRotaOtimizada() {
       // Monta as coordenadas. OSRM usa Lng,Lat
       let coords = `${lng0},${lat0}`;
       for (const e of validEntregas) {
-        coords += `;${e.longitude},${e.latitude}`;
+        // Garantir que a coordenada use ponto ao invés de vírgula para as casas decimais
+        let elng = String(e.longitude).replace(',', '.').trim();
+        let elat = String(e.latitude).replace(',', '.').trim();
+        coords += `;${elng},${elat}`;
       }
       
       const res = await fetch(`https://router.project-osrm.org/trip/v1/driving/${coords}?roundtrip=false&source=first`);
+      
+      if (!res.ok) {
+        const text = await res.text();
+        console.error("OSRM Error:", res.status, text);
+        alert(`A inteligência de rotas recusou o cálculo (Erro ${res.status}). Verifique se as coordenadas das entregas estão corretas.`);
+        loadMinhasEntregas();
+        return;
+      }
+      
       const data = await res.json();
       
       if (data.code === 'Ok' && data.waypoints) {
@@ -475,7 +487,9 @@ async function iniciarRotaOtimizada() {
           const originalIdx = wp.original_index - 1; 
           const e = validEntregas[originalIdx];
           newOrderIds.push(e.id);
-          googleMapsDirUrl += `/${e.latitude},${e.longitude}`;
+          let mapLat = String(e.latitude).replace(',', '.').trim();
+          let mapLng = String(e.longitude).replace(',', '.').trim();
+          googleMapsDirUrl += `/${mapLat},${mapLng}`;
         }
         
         // Adiciona pro final da fila as entregas que vieram sem coordenadas (se houver)
@@ -491,11 +505,11 @@ async function iniciarRotaOtimizada() {
         window.open(googleMapsDirUrl, '_blank');
         loadMinhasEntregas(); // recarrega a UI travando na ordem
       } else {
-        alert("Erro ao calcular otimização.");
+        alert("Erro ao calcular otimização: " + (data.message || 'Desconhecido'));
         loadMinhasEntregas();
       }
     } catch(err) {
-      console.error(err);
+      console.error("Catch Error OSRM:", err);
       alert("Falha de rede ao contatar a inteligência de rotas.");
       loadMinhasEntregas();
     }
