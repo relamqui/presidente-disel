@@ -462,17 +462,24 @@ async function iniciarRotaOtimizada() {
         coords += `;${elng},${elat}`;
       }
       
-      const res = await fetch(`https://router.project-osrm.org/trip/v1/driving/${coords}?roundtrip=false&source=first`);
+      const token = localStorage.getItem('entregador_token');
+      const res = await fetch(`${API_URL}/api/entregador/otimizar_rota`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ coords })
+      });
+      
+      const data = await res.json();
       
       if (!res.ok) {
-        const text = await res.text();
-        console.error("OSRM Error:", res.status, text);
-        alert(`A inteligência de rotas recusou o cálculo (Erro ${res.status}). Verifique se as coordenadas das entregas estão corretas.`);
+        console.error("OSRM Proxy Error:", res.status, data);
+        alert(`A inteligência de rotas recusou o cálculo (Erro ${res.status}). ${data.error || ''}`);
         loadMinhasEntregas();
         return;
       }
-      
-      const data = await res.json();
       
       if (data.code === 'Ok' && data.waypoints) {
         // waypoints tem a nova ordem.

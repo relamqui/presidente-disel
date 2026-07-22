@@ -1,4 +1,4 @@
-const CACHE_NAME = 'wp-crm-entregador-v2';
+const CACHE_NAME = 'wp-crm-entregador-v3';
 const ASSETS = [
   '/entregador',
   '/css/entregador.css',

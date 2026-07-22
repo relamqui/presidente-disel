@@ -822,6 +822,30 @@ def concluir_entrega():
     db_sql.session.commit()
     return jsonify({'success': True, 'status': entrega.status})
 
+@app.route('/api/entregador/otimizar_rota', methods=['POST'])
+@auth_required
+def otimizar_rota():
+    if request.user.get('role') not in ('entregador', 'admin'):
+        return jsonify({'error': 'Acesso negado'}), 403
+    
+    data = request.json
+    coords = data.get('coords')
+    if not coords:
+        return jsonify({'error': 'Coordenadas não fornecidas'}), 400
+        
+    try:
+        url = f"https://router.project-osrm.org/trip/v1/driving/{coords}?roundtrip=false&source=first"
+        # Faz a requisição no backend para evitar problemas de CORS no frontend
+        res = requests.get(url, timeout=10)
+        
+        if res.status_code != 200:
+            return jsonify({'error': f'Falha no OSRM: {res.status_code}'}), 400
+            
+        return jsonify(res.json())
+    except Exception as e:
+        print(f"Erro ao otimizar rota: {e}")
+        return jsonify({'error': str(e)}), 500
+
 def admin_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
