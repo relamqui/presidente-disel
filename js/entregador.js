@@ -517,7 +517,7 @@ async function iniciarRotaOtimizada() {
       }
     } catch(err) {
       console.error("Catch Error OSRM:", err);
-      alert("Falha de rede ao contatar a inteligência de rotas.");
+      alert("Erro no App: " + err.message + "\n(Dica: O servidor pode estar desatualizado, reinicie-o no Easypanel)");
       loadMinhasEntregas();
     }
   }, (err) => {
