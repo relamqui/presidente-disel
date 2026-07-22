@@ -288,3 +288,34 @@ body {
 
 .btn-primary:active { background: var(--primary-hover); }
 .btn-secondary:active { background: var(--bg-hover); }
+
+
+/* TABS */
+.tabs-container {
+  display: flex;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border);
+}
+.tab {
+  flex: 1;
+  text-align: center;
+  padding: 14px;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: 0.2s;
+}
+.tab.active {
+  color: var(--primary);
+  border-bottom: 2px solid var(--primary);
+}
+.card.locked {
+  opacity: 0.5;
+  pointer-events: none;
+}
+.card.highlight {
+  border: 2px solid #25d366;
+  background-color: #1a2c22;
+}
+

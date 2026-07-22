@@ -455,14 +455,6 @@ function handleIncomingWebhook(data) {
     let type = fromMe ? 'out' : 'in';
 
     if (!contact) {
-      // Para usuários não-admin, só exibir contatos que já foram carregados
-      // do servidor (com filtro de filial/setor). Novos contatos via socket
-      // serão vistos após o próximo reload de contatos.
-      const userData = JSON.parse(localStorage.getItem('wp_crm_user') || '{}');
-      if (userData.role !== 'admin') {
-        console.log('[Socket] Contato novo ignorado (filtro de filial/setor):', phone, instName);
-        return;
-      }
       // instName já declarado acima (linha 308), reutilizar
       contact = {
         id: 'c_' + phone + '_' + instName,
@@ -3088,4 +3080,5 @@ setView = function(view) {
     }
   }
 };
+
 

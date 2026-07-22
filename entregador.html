@@ -67,18 +67,30 @@
   <!-- TELA DE DASHBOARD (LISTA) -->
   <div id="dashboardScreen" class="screen" style="display:none;">
     <header class="app-header">
-      <div class="title">Entregas Disponíveis</div>
-      
-      <!-- Banner para ativar notificações (Especialmente para iOS) -->
-      <div id="notificationBanner" style="display: none; background: var(--primary); padding: 12px; margin: 16px; border-radius: 12px; text-align: center; color: white;">
-        <p style="margin: 0 0 10px 0; font-size: 14px;">Ative as notificações para ser avisado de novas entregas.</p>
-        <button onclick="subscribePushNotifications()" style="background: white; color: var(--primary); width: 100%; border-radius: 8px; font-weight: bold;">🔔 Ativar Notificações</button>
-      </div>
-
+      <div class="title">Painel Entregador</div>
       <button onclick="logout()" class="btn-logout">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
       </button>
     </header>
+
+    <!-- TABS -->
+    <div class="tabs-container">
+      <div class="tab active" id="tabDisponiveis" onclick="switchTab('disponiveis')">Disponíveis</div>
+      <div class="tab" id="tabMinhaRota" onclick="switchTab('minha_rota')">Minha Rota</div>
+    </div>
+
+    <!-- Banner para ativar notificações (Especialmente para iOS) -->
+    <div id="notificationBanner" style="display: none; background: var(--primary); padding: 12px; margin: 16px; border-radius: 12px; text-align: center; color: white;">
+      <p style="margin: 0 0 10px 0; font-size: 14px;">Ative as notificações para ser avisado de novas entregas.</p>
+      <button onclick="subscribePushNotifications()" style="background: white; color: var(--primary); width: 100%; border-radius: 8px; font-weight: bold;">🔔 Ativar Notificações</button>
+    </div>
+
+    <div class="action-banner" id="bannerIniciarRota" style="display:none; padding: 16px;">
+      <button onclick="iniciarRotaOtimizada()" class="btn-primary" style="width:100%; padding: 14px; font-size: 16px; display:flex; align-items:center; justify-content:center; gap:8px;">
+        🗺️ Calcular e Iniciar Rota
+      </button>
+    </div>
+
     <main class="content-scroll" id="listaEntregas">
       <!-- Cards renderizados via JS -->
       <div style="text-align:center; padding: 20px; color: var(--text-muted);">Carregando entregas...</div>
@@ -99,7 +111,8 @@
       </div>
       <div class="action-buttons">
         <button class="btn-secondary" onclick="voltarParaDashboard()">Voltar</button>
-        <button class="btn-primary" onclick="aceitarEntrega()">Aceitar</button>
+        <button class="btn-primary" id="btnAceitar" onclick="aceitarEntrega()">Aceitar</button>
+        <button class="btn-primary" id="btnConcluir" style="display:none; background:#25d366; color:white;" onclick="concluirEntregaAtual()">✅ Entregue</button>
       </div>
     </main>
   </div>

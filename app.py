@@ -773,6 +773,55 @@ def aceitar_entrega():
     db_sql.session.commit()
     return jsonify({'success': True, 'status': entrega.status})
 
+@app.route('/api/entregador/entregas/minhas', methods=['GET'])
+@auth_required
+def get_minhas_entregas():
+    if request.user.get('role') not in ('entregador', 'admin'):
+        return jsonify({'error': 'Acesso negado. Apenas entregadores.'}), 403
+        
+    user_id = request.user.get('id')
+    # Retorna entregas vinculadas ao entregador com status "Saiu para entrega"
+    entregas = Entrega.query.filter_by(entregador_id=user_id, status='Saiu para entrega').order_by(Entrega.id.desc()).all()
+    return jsonify([{
+        'id': e.id,
+        'nome_peca': e.nome_peca,
+        'tamanho_peca': e.tamanho_peca,
+        'nome_cliente': e.nome_cliente,
+        'localizacao': e.localizacao,
+        'telefone_cliente': e.telefone_cliente,
+        'pago': e.pago,
+        'forma_pagamento': e.forma_pagamento,
+        'valor': e.valor,
+        'status': e.status,
+        'nome_atendente': e.nome_atendente,
+        'latitude': e.latitude,
+        'longitude': e.longitude,
+        'entregador_id': e.entregador_id,
+        'criado_em': e.criado_em.isoformat() if e.criado_em else None
+    } for e in entregas])
+
+@app.route('/api/entregador/concluir_entrega', methods=['POST'])
+@auth_required
+def concluir_entrega():
+    if request.user.get('role') not in ('entregador', 'admin'):
+        return jsonify({'error': 'Acesso negado'}), 403
+        
+    data = request.json
+    entrega_id = data.get('entrega_id')
+    
+    entrega = Entrega.query.get(entrega_id)
+    if not entrega:
+        return jsonify({'error': 'Entrega não encontrada'}), 404
+        
+    # Somente o próprio entregador (ou admin) pode concluir
+    user_id = request.user.get('id')
+    if entrega.entregador_id != user_id and request.user.get('role') != 'admin':
+        return jsonify({'error': 'Você não tem permissão para concluir esta entrega'}), 403
+        
+    entrega.status = 'Entregue'
+    db_sql.session.commit()
+    return jsonify({'success': True, 'status': entrega.status})
+
 def admin_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -3017,35 +3066,7 @@ def webhook():
 
             db_sql.session.commit()
 
-            # --- Corpal Webhook (Lead or outgoing message) ---
-            try:
-                _contact_for_webhook = Contact.query.filter_by(id=contact_id).first()
-                _att_user = User.query.get(_contact_for_webhook.assigned_to) if _contact_for_webhook and _contact_for_webhook.assigned_to else None
-                _filial_wh = None
-                _setor_wh = None
-                if _att_user:
-                    if _att_user.filial_id:
-                        _f = Filial.query.get(_att_user.filial_id)
-                        _filial_wh = _f.name if _f else None
-                    if _att_user.setor_id:
-                        _s = Setor.query.get(_att_user.setor_id)
-                        _setor_wh = _s.name if _s else None
-                corpal_payload = {
-                    "evento": "mensagem",
-                    "atendimento_id": str(uuid.uuid4()),
-                    "numero_lead": phone,
-                    "instancia": instance,
-                    "filial": _filial_wh,
-                    "setor": _setor_wh,
-                    "nome_atendente": _contact_for_webhook.assigned_name if _contact_for_webhook and _contact_for_webhook.assigned_name else "",
-                    "atendente_id": str(_att_user.id) if _att_user else None,
-                    "direcao": "lead" if not fromMe else "atendente",
-                    "mensagem": text,
-                    "timestamp": now.isoformat()
-                }
-                requests.post(CORPAL_WEBHOOK_URL, json=corpal_payload, timeout=5)
-            except Exception as corpal_e:
-                print(f"Erro webhook corpal (webhook): {corpal_e}")
+            # --- Corpal Webhook Removido ---
 
             # Emitir evento com texto processado para o frontend
             emit_data = dict(data)
@@ -3077,85 +3098,7 @@ def get_contacts():
             contacts = Contact.query.filter(Contact.instance.in_(allowed_instances)).all()
         else:
             contacts = []
-        
-        # Filtrar por tags de filial:setor conforme cargo
-        if user.role == 'gestor':
-            # Gestor vê chats de TODOS os setores da sua filial
-            filial_name = user.filial
-            if not filial_name and user.filial_id:
-                f_obj = Filial.query.get(user.filial_id)
-                if f_obj: filial_name = f_obj.name
-            
-            if filial_name:
-                # Buscar nomes de todos os setores da filial do gestor
-                setores_da_filial = Setor.query.filter_by(filial_id=user.filial_id).all()
-                allowed_tags = set()
-                for s in setores_da_filial:
-                    allowed_tags.add(f"{filial_name}:{s.name}")
-                # Também permitir tag só da filial (sem setor)
-                allowed_tags.add(filial_name)
-                
-                # Coletar TODOS os nomes de filiais para detectar tags de outras filiais
-                all_filial_names = set(f.name for f in Filial.query.all())
-                
-                print(f"[GESTOR CONTACTS] user={user.id} filial={filial_name} allowed_tags={allowed_tags}")
-                
-                filtered = []
-                # Buscar IDs de atendentes da mesma filial para ver chats em atendimento
-                filial_user_ids = set(u.id for u in User.query.filter_by(filial_id=user.filial_id).all())
-                for c in contacts:
-                    contact_tags = c.tags or []
-                    
-                    # Verifica se o contato tem tag filial:setor da minha filial e/ou de outra
-                    has_other_filial_tag = False
-                    has_my_filial_tag = False
-                    has_any_filial_tag = False
-                    for t in contact_tags:
-                        if ':' in t and not t.lower().startswith('atendente:'):
-                            tag_filial = t.split(':')[0]
-                            if tag_filial in all_filial_names:
-                                has_any_filial_tag = True
-                                if t in allowed_tags or tag_filial == filial_name:
-                                    has_my_filial_tag = True
-                                else:
-                                    has_other_filial_tag = True
-                        elif t in all_filial_names:
-                            has_any_filial_tag = True
-                            if t == filial_name:
-                                has_my_filial_tag = True
-                            else:
-                                has_other_filial_tag = True
-                    
-                    # Excluir apenas se tem tag de outra filial e NENHUMA da minha
-                    # (transferências criam tags de múltiplas filiais intencionalmente)
-                    if has_other_filial_tag and not has_my_filial_tag:
-                        continue
-                    
-                    # Verifica se alguma tag do contato bate com as tags permitidas
-                    has_allowed_tag = any(t in allowed_tags for t in contact_tags)
-                    # Também mostra chats atribuídos ao gestor ou a qualquer user da filial
-                    is_assigned_to_filial = (c.assigned_to in filial_user_ids) if c.assigned_to else False
-                    
-                    # Contato precisa ter tag da filial OU estar atribuído a alguém da filial
-                    if has_allowed_tag or is_assigned_to_filial:
-                        filtered.append(c)
-                contacts = filtered
-            # Se não tem filial, não filtra por tag (fica vazio pois sem instância)
-        else:
-            # Usuário comum: vê apenas chats com tag exata do seu email (case-insensitive)
-            required_tag = (user.email or '').lower()
-            print(f"[USER CONTACTS] user={user.id} required_tag={required_tag}")
-            
-            filtered = []
-            for c in contacts:
-                contact_tags = [t.lower() if isinstance(t, str) else t for t in (c.tags or [])]
-                has_tag = required_tag in contact_tags
-                # Também mostra chats atribuídos ao próprio usuário
-                is_assigned_to_me = (c.assigned_to == user.id)
-                if has_tag or is_assigned_to_me:
-                    filtered.append(c)
-            contacts = filtered
-        
+
     contacts_list = []
     for c in contacts:
         contacts_list.append({
