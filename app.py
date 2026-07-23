@@ -612,10 +612,9 @@ def push_test():
     import time
     
     subs = PushSubscription.query.all()
-    # Pega a chave privada, tenta caminho absoluto para não dar erro
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    default_key_path = os.path.join(base_dir, 'private_key.pem')
-    vapid_private_key = os.environ.get('VAPID_PRIVATE_KEY', default_key_path)
+    # Chave privada VAPID em formato raw base64url (não PEM)
+    # O pywebpush aceita a chave bruta de 32 bytes codificada em base64url
+    vapid_private_key = os.environ.get('VAPID_PRIVATE_KEY', 'BAMfTYg3RHaf4cFRuMZa9T1RvZFr7gsUDLBw6CqwzSU')
     
     payload = json.dumps({
         "title": "Teste WPCRM",
@@ -637,9 +636,7 @@ def push_test():
         parsed = urlparse(sub.endpoint)
         aud = f"{parsed.scheme}://{parsed.netloc}"
         vapid_claims = {
-            "sub": "mailto:contato@presidentedisel.com",
-            "aud": aud,
-            "exp": int(time.time()) + (12 * 3600)
+            "sub": "mailto:contato@presidentedisel.com"
         }
         try:
             webpush(
