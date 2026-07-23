@@ -1025,7 +1025,24 @@ function renderMessages(messages) {
     const botLabel = isBot ? `<div class="bot-label">🤖 Respondido pelo Bot</div>` : '';
 
     let messageContent = msg.text ? String(msg.text) : "";
+    let isDeletedMsg = false;
     const authToken = localStorage.getItem('wp_crm_token');
+    
+    // Parse [REPLY:id|text]
+    let replyBlock = '';
+    const replyMatch = messageContent.match(/^\[REPLY:([^|]+)\|([^\]]+)\]\n/);
+    if (replyMatch) {
+        const replyText = replyMatch[2];
+        replyBlock = `<div class="msg-reply-block">
+            <div class="msg-reply-text">${escapeHtml(replyText)}</div>
+        </div>`;
+        messageContent = messageContent.replace(replyMatch[0], '');
+    } else if (messageContent === '[MENSAGEM_APAGADA]') {
+        messageContent = '<div class="msg-deleted"><svg viewBox="0 0 16 16" width="14" height="14" style="margin-right:4px;"><path fill="currentColor" d="M8 1.5a6.5 6.5 0 100 13 6.5 6.5 0 000-13zM0 8a8 8 0 1116 0A8 8 0 010 8z"></path><path fill="currentColor" d="M10.854 5.146a.5.5 0 00-.708 0L8 7.293 5.854 5.146a.5.5 0 10-.708.708L7.293 8l-2.147 2.146a.5.5 0 00.708.708L8 8.707l2.146 2.147a.5.5 0 00.708-.708L8.707 8l2.147-2.146a.5.5 0 000-.708z"></path></svg> <em>Esta mensagem foi apagada</em></div>';
+        replyBlock = '';
+        ticks = '';
+        isDeletedMsg = true;
+    }
     
     if (messageContent.startsWith('[LOCATION_REF] ')) {
         const ref = messageContent.replace('[LOCATION_REF] ', '');
@@ -1146,13 +1163,17 @@ function renderMessages(messages) {
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path><line x1="12" y1="9" x2="12" y2="15"></line><line x1="9" y1="12" x2="15" y2="12"></line></svg>
                 </button>` : ''}
             </div>`;
-    } else {
+    } else if (!isDeletedMsg) {
         messageContent = escapeHtml(messageContent).replace(/\n/g, '<br>').replace(/\*([^*\n]+)\*/g, '<strong>$1</strong>');
     }
 
     el.innerHTML = `
       <div class="msg-bubble">
+        <div class="msg-actions" onclick="toggleMsgMenu(event, '${msg.id}')">
+          <svg viewBox="0 0 19 20" width="19" height="20"><path fill="currentColor" d="M3.8 6.7l5.7 5.7 5.7-5.7 1.6 1.6-7.3 7.2-7.3-7.2 1.6-1.6z"></path></svg>
+        </div>
         ${botLabel}
+        ${replyBlock}
         ${messageContent}
         <div class="msg-meta">
           <span class="msg-time">${msg.time}</span>
@@ -1300,7 +1321,11 @@ async function sendMessage() {
 
   // 1. Atualiza Localmente (Optimistic Update) — exibe texto original sem prefixo
   const tempId = 'temp_' + Date.now();
-  const newMsg = { id: tempId, text: textToSend, type: 'out', time };
+  let optimisticText = textToSend;
+  if (window.replyingToMsgId) {
+      optimisticText = `[REPLY:${window.replyingToMsgId}|${window.replyingToMsgText}]\n${textToSend}`;
+  }
+  const newMsg = { id: tempId, text: optimisticText, type: 'out', time };
   if (!currentChat.messages) currentChat.messages = [];
   currentChat.messages.push(newMsg);
   currentChat.lastMsg = text;
@@ -1341,7 +1366,8 @@ async function sendMessage() {
       body: JSON.stringify({
         instance: targetInstance,
         number: cleanNumber,
-        text: textToSend  // Envia com o prefixo *Nome:*
+        text: textToSend,  // Envia com o prefixo *Nome:*
+        reply_to: window.replyingToMsgId || null
       })
     });
 
@@ -1366,10 +1392,114 @@ async function sendMessage() {
     }
     
     console.log('Mensagem enviada via WAHA:', targetInstance);
+    
+    // Limpa o estado de reply após envio
+    cancelReply();
   } catch (err) {
     console.error('Erro ao enviar mensagem:', err);
     showToast(`Erro ao enviar: ${err.message}`);
   }
+}
+
+// ─── Ações de Mensagem (Menu de Contexto, Responder, Apagar) ───────────────────
+function toggleMsgMenu(event, msgId) {
+    event.stopPropagation();
+    
+    const oldMenu = document.getElementById('msg-context-menu');
+    if (oldMenu) oldMenu.remove();
+    
+    const menu = document.createElement('div');
+    menu.id = 'msg-context-menu';
+    menu.className = 'msg-context-menu';
+    menu.innerHTML = `
+        <div class="msg-menu-item" onclick="replyToMsg('${msgId}')">Responder</div>
+        <div class="msg-menu-item delete" onclick="deleteMessage('${msgId}')">Apagar</div>
+    `;
+    
+    document.body.appendChild(menu);
+    
+    const rect = event.currentTarget.getBoundingClientRect();
+    menu.style.top = `${rect.bottom + window.scrollY}px`;
+    menu.style.left = `${rect.left + window.scrollX - 120}px`;
+    
+    setTimeout(() => {
+        const closeMenu = (e) => {
+            if (!menu.contains(e.target)) {
+                menu.remove();
+                document.removeEventListener('click', closeMenu);
+            }
+        };
+        document.addEventListener('click', closeMenu);
+    }, 0);
+}
+
+function replyToMsg(msgId) {
+    const msg = currentChat.messages.find(m => m.id === msgId);
+    if (!msg) return;
+    
+    window.replyingToMsgId = msgId;
+    window.replyingToMsgText = (msg.text || '').replace(/\n/g, ' ').substring(0, 50);
+    
+    const replyBar = document.getElementById('reply-preview-bar');
+    const replyText = document.getElementById('reply-preview-text');
+    if (replyBar && replyText) {
+        replyText.textContent = window.replyingToMsgText;
+        replyBar.style.display = 'flex';
+    }
+    
+    document.getElementById('messageInput').focus();
+    
+    const oldMenu = document.getElementById('msg-context-menu');
+    if (oldMenu) oldMenu.remove();
+}
+
+function cancelReply() {
+    window.replyingToMsgId = null;
+    window.replyingToMsgText = null;
+    const replyBar = document.getElementById('reply-preview-bar');
+    if (replyBar) replyBar.style.display = 'none';
+}
+
+async function deleteMessage(msgId) {
+    const oldMenu = document.getElementById('msg-context-menu');
+    if (oldMenu) oldMenu.remove();
+
+    if (!confirm('Tem certeza que deseja apagar esta mensagem para todos?')) return;
+    
+    const msg = currentChat.messages.find(m => m.id === msgId);
+    const originalText = msg ? msg.text : '';
+    if (msg) {
+        msg.text = '[MENSAGEM_APAGADA]';
+        renderMessages(currentChat.messages);
+    }
+    
+    try {
+        const cleanNumber = currentChat.phone.replace(/\D/g, '');
+        const response = await fetch(`${API_URL}/api/whatsapp/delete-message`, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('wp_crm_token')}`
+            },
+            body: JSON.stringify({
+                instance: currentChat.instance,
+                number: cleanNumber,
+                message_id: msgId
+            })
+        });
+        
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || 'Falha ao apagar');
+        }
+    } catch (err) {
+        console.error('Erro ao deletar mensagem:', err);
+        showToast(`Erro ao apagar: ${err.message}`);
+        if (msg) {
+            msg.text = originalText;
+            renderMessages(currentChat.messages);
+        }
+    }
 }
 
 function handleEnter(e) {
@@ -3241,4 +3371,82 @@ setView = function(view) {
   }
 };
 
+// ─── Colar imagem com Ctrl+V no campo de mensagem ───────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  const messageInput = document.getElementById('messageInput');
+  if (messageInput) {
+    messageInput.addEventListener('paste', (event) => {
+      const clipboardData = event.clipboardData || window.clipboardData;
+      if (!clipboardData) return;
+      
+      const items = clipboardData.items;
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (item.kind === 'file' && item.type.startsWith('image/')) {
+          const file = item.getAsFile();
+          if (file) {
+            openImageCropModal(file);
+            event.preventDefault();
+            return;
+          }
+        }
+      }
+    });
+  }
+});
 
+// ─── Modal de Recorte de Imagem ──────────────────────────────────────────────
+let currentCropper = null;
+
+function openImageCropModal(file) {
+  const modal = document.getElementById('imageCropModal');
+  const imageToCrop = document.getElementById('imageToCrop');
+  
+  if (currentCropper) {
+    currentCropper.destroy();
+    currentCropper = null;
+  }
+  
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    imageToCrop.src = e.target.result;
+    modal.style.display = 'flex';
+    
+    currentCropper = new Cropper(imageToCrop, {
+      viewMode: 1,
+      dragMode: 'move',
+      autoCropArea: 0.9,
+      restore: false,
+      guides: true,
+      center: true,
+      highlight: false,
+      cropBoxMovable: true,
+      cropBoxResizable: true,
+      toggleDragModeOnDblclick: false,
+    });
+  };
+  reader.readAsDataURL(file);
+}
+
+function closeImageCropModal() {
+  document.getElementById('imageCropModal').style.display = 'none';
+  if (currentCropper) {
+    currentCropper.destroy();
+    currentCropper = null;
+  }
+}
+
+function confirmImageCrop() {
+  if (!currentCropper) return;
+  
+  currentCropper.getCroppedCanvas({
+    maxWidth: 1920,
+    maxHeight: 1920,
+  }).toBlob((blob) => {
+    if (blob) {
+      const croppedFile = new File([blob], "cropped_image.jpg", { type: "image/jpeg", lastModified: new Date().getTime() });
+      sendImageMessage(croppedFile);
+      closeImageCropModal();
+    }
+  }, 'image/jpeg', 0.85);
+}

@@ -291,6 +291,18 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0-3-3.87"/></svg>
         </button>
         <input type="file" id="fileUpload" style="display:none" onchange="handleFileUpload(event)" />
+        
+        <!-- Barra de pré-visualização de resposta -->
+        <div id="reply-preview-bar" class="reply-preview-bar" style="display:none;">
+            <div class="reply-preview-content">
+                <span class="reply-preview-label">Respondendo a:</span>
+                <span id="reply-preview-text" class="reply-preview-text"></span>
+            </div>
+            <button class="icon-btn cancel-reply" onclick="cancelReply()" title="Cancelar resposta">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+        </div>
+        
         <div class="message-input-wrap">
           <textarea id="messageInput" placeholder="Digite uma mensagem" rows="1" oninput="autoResize(this); updateSendBtn()" onkeydown="handleEnter(event)"></textarea>
         </div>
@@ -579,8 +591,27 @@
   </div>
 </div>
 
+<!-- Modal Cortar Imagem -->
+<div class="modal-overlay" id="imageCropModal" style="display:none" onclick="closeImageCropModal()">
+  <div class="modal-box" style="width: 800px; max-width: 95vw;" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h3>Cortar Imagem</h3>
+      <button class="icon-btn" onclick="closeImageCropModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div style="padding: 20px; text-align: center;">
+      <div style="max-height: 500px; overflow: hidden; margin-bottom: 15px; display: flex; justify-content: center; align-items: center; background: #111b21; border-radius: 8px;">
+        <img id="imageToCrop" src="" style="max-width: 100%; max-height: 500px; display: block;" />
+      </div>
+      <button class="btn-save-notes" style="width:100%; background: #00a884; color: white; padding: 12px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;" onclick="confirmImageCrop()">Cortar e Enviar</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
 <script src="js/data.js"></script>
 <script src="js/dashboard.js"></script>
 </body>
