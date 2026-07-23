@@ -208,6 +208,8 @@ class Entrega(db_sql.Model):
     codigo_verificacao = db_sql.Column(db_sql.String(20), nullable=True)
     entregador_id = db_sql.Column(db_sql.Integer, nullable=True)
     justificativa_falha = db_sql.Column(db_sql.Text, nullable=True)
+    saiu_para_entrega_em = db_sql.Column(db_sql.Text, nullable=True)
+    finalizado_em = db_sql.Column(db_sql.Text, nullable=True)
 
 # ─── Utils ──────────────────────────────────────────────────────────────────
 def normalize_br_phone(phone_str):
@@ -776,6 +778,7 @@ def aceitar_entrega():
         
     entrega.status = 'Saiu para entrega'
     entrega.entregador_id = request.user.get('id')
+    entrega.saiu_para_entrega_em = datetime.datetime.utcnow().isoformat()
     db_sql.session.commit()
     return jsonify({'success': True, 'status': entrega.status})
 
@@ -827,6 +830,7 @@ def falha_entrega():
         
     entrega.status = 'Falha na Entrega'
     entrega.justificativa_falha = justificativa
+    entrega.finalizado_em = datetime.datetime.utcnow().isoformat()
     db_sql.session.commit()
     return jsonify({'success': True, 'status': entrega.status, 'justificativa_falha': entrega.justificativa_falha})
 
@@ -905,6 +909,71 @@ def transferir_rota():
     db_sql.session.commit()
     return jsonify({'success': True, 'modificadas': len(entregas_ativas)})
 
+@app.route('/api/admin/entregadores/historico_rotas', methods=['GET'])
+@auth_required
+def get_historico_rotas():
+    if request.user.get('role') not in ('admin', 'gestor'):
+        return jsonify({'error': 'Acesso negado'}), 403
+
+    # Busca entregas que já saíram para entrega e estão vinculadas a um entregador
+    entregas = Entrega.query.filter(
+        Entrega.entregador_id.isnot(None),
+        Entrega.saiu_para_entrega_em.isnot(None)
+    ).order_by(Entrega.saiu_para_entrega_em.desc()).all()
+
+    # Organiza entregas por entregador
+    rotas_por_entregador = {}
+    users = {u.id: u.name for u in User.query.filter_by(role='entregador').all()}
+
+    for e in entregas:
+        eid = e.entregador_id
+        # Cria uma "rota" baseada no horário de saída (aproximado por hora para agrupar pacotes que saíram juntos)
+        # Vamos usar a data e hora ignorando minutos/segundos para agrupar as que saíram no mesmo batch
+        if not e.saiu_para_entrega_em: continue
+        
+        try:
+            dt = datetime.datetime.fromisoformat(e.saiu_para_entrega_em.replace('Z', '+00:00'))
+            # Agrupa por hora
+            batch_key = dt.strftime("%Y-%m-%d %H:00")
+        except:
+            batch_key = e.saiu_para_entrega_em[:13]
+
+        if eid not in rotas_por_entregador:
+            rotas_por_entregador[eid] = {}
+        
+        if batch_key not in rotas_por_entregador[eid]:
+            rotas_por_entregador[eid][batch_key] = {
+                'entregador_nome': users.get(eid, f'Entregador #{eid}'),
+                'saiu_para_entrega_em': e.saiu_para_entrega_em,
+                'entregas': [],
+                'finalizado_em': e.finalizado_em
+            }
+        
+        # Se encontrou uma entrega concluída com horário maior, atualiza o tempo final da rota
+        if e.finalizado_em:
+            current_fin = rotas_por_entregador[eid][batch_key]['finalizado_em']
+            if not current_fin or e.finalizado_em > current_fin:
+                rotas_por_entregador[eid][batch_key]['finalizado_em'] = e.finalizado_em
+
+        rotas_por_entregador[eid][batch_key]['entregas'].append({
+            'id': e.id,
+            'cliente': e.nome_cliente,
+            'status': e.status,
+            'justificativa': e.justificativa_falha,
+            'finalizado_em': e.finalizado_em
+        })
+
+    # Converte para lista plana
+    historico = []
+    for eid, batches in rotas_por_entregador.items():
+        for b_key, b_data in batches.items():
+            historico.append(b_data)
+            
+    # Ordena da rota mais recente para a mais antiga
+    historico.sort(key=lambda x: x['saiu_para_entrega_em'], reverse=True)
+
+    return jsonify(historico)
+
 @app.route('/api/entregador/concluir_entrega', methods=['POST'])
 @auth_required
 def concluir_entrega():
@@ -924,6 +993,7 @@ def concluir_entrega():
         return jsonify({'error': 'Você não tem permissão para concluir esta entrega'}), 403
         
     entrega.status = 'Entregue'
+    entrega.finalizado_em = datetime.datetime.utcnow().isoformat()
     db_sql.session.commit()
     return jsonify({'success': True, 'status': entrega.status})
 

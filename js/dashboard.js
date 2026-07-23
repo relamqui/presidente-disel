@@ -558,7 +558,102 @@ function setView(view) {
   }
 }
 
-// ─── Lógica do Gestor de Entregas ─────────────────────────────────────────────
+// ─── Lógica do Gestor de Entregas (Mapa & Histórico) ──────────────────────────
+
+function toggleMapVisibility() {
+  const mapContainer = document.getElementById('mapContainer');
+  const icon = document.getElementById('mapToggleIcon');
+  if (mapContainer.style.display === 'none') {
+    mapContainer.style.display = 'block';
+    icon.style.transform = 'rotate(180deg)';
+    if (globalDriverMap) {
+      setTimeout(() => globalDriverMap.invalidateSize(), 300);
+    } else {
+      setTimeout(initGlobalDriverMap, 300);
+    }
+  } else {
+    mapContainer.style.display = 'none';
+    icon.style.transform = 'rotate(0deg)';
+  }
+}
+
+async function loadRouteHistory() {
+  const container = document.getElementById('routeHistoryContainer');
+  if (!container) return;
+  
+  try {
+    const res = await fetch(`${API_URL}/api/admin/entregadores/historico_rotas`, {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('wp_crm_token')}` }
+    });
+    if (!res.ok) throw new Error('Falha ao buscar histórico de rotas');
+    
+    const historico = await res.json();
+    
+    if (historico.length === 0) {
+      container.innerHTML = '<div style="color:var(--text-secondary); text-align:center; padding: 20px;">Nenhum histórico de rota encontrado.</div>';
+      return;
+    }
+    
+    let html = '';
+    historico.forEach(rota => {
+      // Formata horários
+      const saiuDate = new Date(rota.saiu_para_entrega_em.replace('Z', '+00:00'));
+      const saiuTime = saiuDate.toLocaleString('pt-BR');
+      
+      let finalizouTime = 'Em andamento';
+      if (rota.finalizado_em) {
+        const finDate = new Date(rota.finalizado_em.replace('Z', '+00:00'));
+        finalizouTime = finDate.toLocaleString('pt-BR');
+      }
+      
+      let entregasHtml = '';
+      rota.entregas.forEach(ent => {
+        const entFinDate = ent.finalizado_em ? new Date(ent.finalizado_em.replace('Z', '+00:00')).toLocaleTimeString('pt-BR') : '--:--:--';
+        let statusBadge = '';
+        if (ent.status === 'Entregue') {
+          statusBadge = `<span style="background:var(--tag-green); color:white; padding:2px 6px; border-radius:4px; font-size:11px;">Entregue</span>`;
+        } else if (ent.status === 'Falha na Entrega') {
+          statusBadge = `<span style="background:var(--tag-red); color:white; padding:2px 6px; border-radius:4px; font-size:11px;" title="${ent.justificativa || ''}">Falhou</span>`;
+        } else {
+          statusBadge = `<span style="background:var(--tag-blue); color:white; padding:2px 6px; border-radius:4px; font-size:11px;">Em rota</span>`;
+        }
+        entregasHtml += `
+          <div style="display:flex; justify-content:space-between; align-items:center; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 13px;">
+            <span>ID #${ent.id} - ${ent.cliente}</span>
+            <div style="display:flex; gap: 8px; align-items:center;">
+              ${statusBadge}
+              <span style="color:var(--text-muted); font-size:12px;">${entFinDate}</span>
+            </div>
+          </div>
+        `;
+      });
+      
+      html += `
+        <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <h4 style="margin: 0; color: var(--green); display: flex; align-items: center; gap: 8px;">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+              Rota: ${rota.entregador_nome}
+            </h4>
+            <div style="font-size: 12px; color: var(--text-secondary); text-align: right;">
+              <div>Saiu: <strong style="color:var(--text-primary);">${saiuTime}</strong></div>
+              <div>Fim: <strong style="color:var(--text-primary);">${finalizouTime}</strong></div>
+            </div>
+          </div>
+          <div style="background: rgba(0,0,0,0.15); padding: 8px 12px; border-radius: 6px;">
+            ${entregasHtml}
+          </div>
+        </div>
+      `;
+    });
+    
+    container.innerHTML = html;
+  } catch(err) {
+    console.error(err);
+    container.innerHTML = '<div style="color:#f87171; text-align:center; padding: 20px;">Erro ao carregar histórico.</div>';
+  }
+}
+
 
 function openNovaEntregaModal() {
   document.getElementById('novaEntregaModal').style.display = 'flex';
@@ -3362,7 +3457,12 @@ const originalSetView = setView;
 setView = function(view) {
   originalSetView(view);
   if (view === 'entregas') {
-    setTimeout(initGlobalDriverMap, 300);
+    loadRouteHistory();
+    // Mapa agora só inicia se estiver visível (ou se o usuário clicar para abrir)
+    const mapContainer = document.getElementById('mapContainer');
+    if (mapContainer && mapContainer.style.display !== 'none') {
+      setTimeout(initGlobalDriverMap, 300);
+    }
   } else {
     if (driverTrackingInterval) {
       clearInterval(driverTrackingInterval);

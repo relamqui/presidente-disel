@@ -186,8 +186,21 @@
     
     <!-- Mapa Global de Entregadores -->
     <div style="padding: 20px;">
-      <h3 style="color: var(--text-primary); margin-bottom: 10px;">📍 Rastreamento ao Vivo (Entregadores)</h3>
-      <div id="driverTrackingMap" style="width: 100%; height: 400px; border-radius: 8px; border: 1px solid #3b4a54; position: relative; z-index: 1;"></div>
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; cursor: pointer;" onclick="toggleMapVisibility()">
+        <h3 style="color: var(--text-primary); margin: 0;">📍 Rastreamento ao Vivo (Entregadores)</h3>
+        <svg id="mapToggleIcon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" style="transition: transform 0.3s; transform: rotate(0deg);"><polyline points="6 9 12 15 18 9"></polyline></svg>
+      </div>
+      <div id="mapContainer" style="display: none; width: 100%; transition: all 0.3s;">
+        <div id="driverTrackingMap" style="width: 100%; height: 400px; border-radius: 8px; border: 1px solid #3b4a54; position: relative; z-index: 1;"></div>
+      </div>
+    </div>
+    
+    <!-- Histórico de Rotas -->
+    <div style="padding: 0 20px 20px 20px;">
+      <h3 style="color: var(--text-primary); margin-bottom: 15px;">📜 Histórico de Rotas</h3>
+      <div id="routeHistoryContainer" style="display: flex; flex-direction: column; gap: 10px;">
+        <!-- Injetado dinamicamente via JS -->
+      </div>
     </div>
   </section>
 
