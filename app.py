@@ -833,6 +833,81 @@ def falha_entrega():
     db_sql.session.commit()
     return jsonify({'success': True, 'status': entrega.status, 'justificativa_falha': entrega.justificativa_falha})
 
+# ==========================================
+# ADMIN ENTREGADORES
+# ==========================================
+@app.route('/api/admin/entregadores', methods=['GET'])
+@auth_required
+def get_admin_entregadores():
+    # Retorna usuários do tipo entregador e suas entregas ativas
+    if request.user.get('role') != 'admin' and request.user.get('role') != 'gestor':
+        return jsonify({'error': 'Acesso negado'}), 403
+        
+    entregadores = User.query.filter_by(role='entregador').all()
+    resultado = []
+    
+    for ent in entregadores:
+        entregas_ativas = Entrega.query.filter(
+            Entrega.entregador_id == ent.id,
+            Entrega.status.notin_(['Entregue', 'Falha na Entrega'])
+        ).all()
+        
+        resultado.append({
+            'id': ent.id,
+            'name': ent.name,
+            'email': ent.email,
+            'entregas_ativas': [{
+                'id': e.id,
+                'nome_cliente': e.nome_cliente,
+                'status': e.status
+            } for e in entregas_ativas]
+        })
+        
+    return jsonify(resultado)
+
+@app.route('/api/admin/entregadores/desativar_rota', methods=['POST'])
+@auth_required
+def desativar_rota():
+    if request.user.get('role') != 'admin' and request.user.get('role') != 'gestor':
+        return jsonify({'error': 'Acesso negado'}), 403
+        
+    data = request.json
+    entregador_id = data.get('entregador_id')
+    
+    entregas_ativas = Entrega.query.filter(
+        Entrega.entregador_id == entregador_id,
+        Entrega.status.notin_(['Entregue', 'Falha na Entrega'])
+    ).all()
+    
+    for e in entregas_ativas:
+        e.entregador_id = None
+        e.status = 'Pronto para coleta'
+        e.codigo_verificacao = None
+        
+    db_sql.session.commit()
+    return jsonify({'success': True, 'modificadas': len(entregas_ativas)})
+
+@app.route('/api/admin/entregadores/transferir', methods=['POST'])
+@auth_required
+def transferir_rota():
+    if request.user.get('role') != 'admin' and request.user.get('role') != 'gestor':
+        return jsonify({'error': 'Acesso negado'}), 403
+        
+    data = request.json
+    origem_id = data.get('origem_id')
+    destino_id = data.get('destino_id')
+    
+    entregas_ativas = Entrega.query.filter(
+        Entrega.entregador_id == origem_id,
+        Entrega.status.notin_(['Entregue', 'Falha na Entrega'])
+    ).all()
+    
+    for e in entregas_ativas:
+        e.entregador_id = destino_id
+        
+    db_sql.session.commit()
+    return jsonify({'success': True, 'modificadas': len(entregas_ativas)})
+
 @app.route('/api/entregador/concluir_entrega', methods=['POST'])
 @auth_required
 def concluir_entrega():

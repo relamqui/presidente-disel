@@ -97,6 +97,8 @@ function renderUserProfile(user) {
   if (user.role === 'admin' || user.role === 'gestor') {
     document.getElementById('navAdmin').style.display = 'flex';
     document.getElementById('navReports').style.display = 'flex';
+    const btnNavAdminEntregadores = document.getElementById('navAdminEntregadores');
+    if (btnNavAdminEntregadores) btnNavAdminEntregadores.style.display = 'flex';
   }
   
   // O botão de transferência agora é controlado dentro do updateAttendanceBar
@@ -521,12 +523,22 @@ function setView(view) {
     document.getElementById('panelList').style.display = 'none';
     document.getElementById('chatArea').style.display = 'none';
     document.getElementById('sidebarDetails').style.display = 'none';
+    document.getElementById('adminEntregadoresView').style.display = 'none';
     
     const panelEntregas = document.getElementById('panelEntregas');
     if (panelEntregas) {
       panelEntregas.style.display = 'flex';
       loadEntregas();
     }
+  } else if (view === 'admin_entregadores') {
+    document.getElementById('panelList').style.display = 'none';
+    document.getElementById('chatArea').style.display = 'none';
+    document.getElementById('sidebarDetails').style.display = 'none';
+    const panelEntregas = document.getElementById('panelEntregas');
+    if (panelEntregas) panelEntregas.style.display = 'none';
+    
+    document.getElementById('adminEntregadoresView').style.display = 'flex';
+    loadAdminEntregadores();
   } else {
     document.getElementById('panelList').style.display = 'flex';
     document.getElementById('chatArea').style.display = 'flex';
@@ -538,6 +550,7 @@ function setView(view) {
     if (panelEntregas) {
       panelEntregas.style.display = 'none';
     }
+    document.getElementById('adminEntregadoresView').style.display = 'none';
     
     document.getElementById('panelTitle').textContent = {
       chats: 'Conversas', contacts: 'Contatos', settings: 'Configurações'
@@ -2418,9 +2431,156 @@ async function showNewChat() {
 
 function closeNewChatModal() {
   document.getElementById('newChatModal').style.display = 'none';
+};
+
+// ==========================================
+// ADMIN ENTREGADORES
+// ==========================================
+
+let adminEntregadoresCache = [];
+let entregadorTransferenciaOrigem = null;
+
+async function loadAdminEntregadores() {
+  const token = localStorage.getItem('wp_crm_token');
+  try {
+    const res = await fetch(`${API_URL}/api/admin/entregadores`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    
+    if (res.ok) {
+      adminEntregadoresCache = await res.json();
+      renderAdminEntregadores();
+    } else {
+      console.error("Erro ao carregar entregadores");
+    }
+  } catch (err) {
+    console.error(err);
+  }
 }
 
+function renderAdminEntregadores() {
+  const container = document.getElementById('adminEntregadoresList');
+  if (!container) return;
+  
+  if (!adminEntregadoresCache || adminEntregadoresCache.length === 0) {
+    container.innerHTML = '<p style="color:var(--text-muted);">Nenhum entregador encontrado no sistema.</p>';
+    return;
+  }
+  
+  let html = '';
+  
+  adminEntregadoresCache.forEach(ent => {
+    const qtdAtivas = ent.entregas_ativas ? ent.entregas_ativas.length : 0;
+    
+    html += `
+      <div style="background:var(--bg-dark); padding:16px; border-radius:12px; border:1px solid var(--border); display:flex; flex-direction:column; gap:12px;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <h3 style="margin:0; font-size:16px; color:var(--primary);">${escapeHtml(ent.name)}</h3>
+            <span style="font-size:13px; color:var(--text-muted);">${escapeHtml(ent.email)}</span>
+          </div>
+          <div style="background:var(--bg-panel); padding:4px 12px; border-radius:12px; border:1px solid var(--border);">
+            <strong style="color:white;">${qtdAtivas}</strong> entregas ativas
+          </div>
+        </div>
+        
+        <div style="display:flex; gap:8px;">
+          <button onclick="desativarRota(${ent.id})" style="flex:1; padding:10px; background:#dc3545; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:600;" ${qtdAtivas === 0 ? 'disabled style="opacity:0.5"' : ''}>
+            🔴 Desativar Rota
+          </button>
+          <button onclick="abrirModalTransferencia(${ent.id}, '${escapeHtml(ent.name)}')" style="flex:1; padding:10px; background:#f59e0b; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:600;" ${qtdAtivas === 0 ? 'disabled style="opacity:0.5"' : ''}>
+            🔁 Transferir Rota
+          </button>
+        </div>
+      </div>
+    `;
+  });
+  
+  container.innerHTML = html;
+}
 
+async function desativarRota(id) {
+  if (!confirm("Isso removerá todas as entregas do motoboy atual e as devolverá para 'Pronto para coleta'. Confirmar?")) return;
+  
+  const token = localStorage.getItem('wp_crm_token');
+  try {
+    const res = await fetch(`${API_URL}/api/admin/entregadores/desativar_rota`, {
+      method: 'POST',
+      headers: { 
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ entregador_id: id })
+    });
+    
+    const data = await res.json();
+    if (data.success) {
+      alert(`Rota desativada! ${data.modificadas} entregas retornadas.`);
+      loadAdminEntregadores(); // recarrega a tela
+    } else {
+      alert("Erro ao desativar rota: " + (data.error || 'Desconhecido'));
+    }
+  } catch (err) {
+    console.error(err);
+    alert('Erro de conexão ao desativar rota');
+  }
+}
+
+function abrirModalTransferencia(origem_id, origem_nome) {
+  entregadorTransferenciaOrigem = origem_id;
+  document.getElementById('transferOrigemNome').textContent = origem_nome;
+  
+  const select = document.getElementById('transferDestinoSelect');
+  select.innerHTML = '<option value="">Selecione...</option>';
+  
+  adminEntregadoresCache.forEach(ent => {
+    if (ent.id !== origem_id) {
+      select.innerHTML += `<option value="${ent.id}">${escapeHtml(ent.name)}</option>`;
+    }
+  });
+  
+  document.getElementById('modalTransferirRota').style.display = 'flex';
+}
+
+function fecharModalTransferencia() {
+  document.getElementById('modalTransferirRota').style.display = 'none';
+  entregadorTransferenciaOrigem = null;
+}
+
+async function confirmarTransferenciaRota() {
+  const destino_id = document.getElementById('transferDestinoSelect').value;
+  if (!destino_id) {
+    alert("Selecione um entregador de destino.");
+    return;
+  }
+  
+  const token = localStorage.getItem('wp_crm_token');
+  try {
+    const res = await fetch(`${API_URL}/api/admin/entregadores/transferir`, {
+      method: 'POST',
+      headers: { 
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ 
+        origem_id: entregadorTransferenciaOrigem,
+        destino_id: parseInt(destino_id)
+      })
+    });
+    
+    const data = await res.json();
+    if (data.success) {
+      alert(`Rota transferida com sucesso! ${data.modificadas} entregas foram movidas.`);
+      fecharModalTransferencia();
+      loadAdminEntregadores();
+    } else {
+      alert("Erro ao transferir rota: " + (data.error || 'Desconhecido'));
+    }
+  } catch (err) {
+    console.error(err);
+    alert('Erro de conexão ao transferir rota');
+  }
+}
 
 function startNewChat() {
   const numberInput = document.getElementById('newChatNumber');
