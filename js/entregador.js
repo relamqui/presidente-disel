@@ -46,7 +46,7 @@ async function installApp() {
   }
 }
 
-const VAPID_PUBLIC_KEY = 'BNiQ0yNtE5rbfIqdwZbZc-oW4_42MntZAw5T0d5MAooN4UlRB5mwmeP70P_ZNmz4yOC6GXf-pudwKTXu9Uwo3cc';
+const VAPID_PUBLIC_KEY = 'BF_VidAn8m0lzptP2wJYw1eSucmPqBq21WNEMlMeYntlZwhQKiUnpm2Qfc8NpdwNdIojyxE1pWlaAu71WjjHY8o';
 
 async function subscribePushNotifications() {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
