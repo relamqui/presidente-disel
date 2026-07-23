@@ -2485,10 +2485,10 @@ function renderAdminEntregadores() {
         </div>
         
         <div style="display:flex; gap:8px;">
-          <button onclick="desativarRota(${ent.id})" style="flex:1; padding:10px; background:#dc3545; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:600;" ${qtdAtivas === 0 ? 'disabled style="opacity:0.5"' : ''}>
+          <button onclick="desativarRota(${ent.id})" style="flex:1; padding:10px; background:#dc3545; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:600; ${qtdAtivas === 0 ? 'opacity:0.5; cursor:not-allowed;' : ''}" ${qtdAtivas === 0 ? 'disabled' : ''}>
             🔴 Desativar Rota
           </button>
-          <button onclick="abrirModalTransferencia(${ent.id}, '${escapeHtml(ent.name)}')" style="flex:1; padding:10px; background:#f59e0b; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:600;" ${qtdAtivas === 0 ? 'disabled style="opacity:0.5"' : ''}>
+          <button onclick="abrirModalTransferencia(${ent.id}, '${escapeHtml(ent.name)}')" style="flex:1; padding:10px; background:#f59e0b; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:600; ${qtdAtivas === 0 ? 'opacity:0.5; cursor:not-allowed;' : ''}" ${qtdAtivas === 0 ? 'disabled' : ''}>
             🔁 Transferir Rota
           </button>
         </div>
