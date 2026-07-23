@@ -112,9 +112,38 @@
       <div class="action-buttons">
         <button class="btn-secondary" onclick="voltarParaDashboard()">Voltar</button>
         <button class="btn-primary" id="btnAceitar" onclick="aceitarEntrega()">Aceitar</button>
-        <button class="btn-primary" id="btnConcluir" style="display:none; background:#25d366; color:white;" onclick="concluirEntregaAtual()">✅ Entregue</button>
+        <div id="conclusionButtons" style="display:none; width:100%; gap:8px;">
+          <button class="btn-primary" style="flex:1; background:#25d366; color:white;" onclick="tentarConcluirEntrega()">✅ Entregue</button>
+          <button class="btn-primary" style="flex:1; background:#dc3545; color:white;" onclick="abrirModalFalha()">❌ Não Entregue</button>
+        </div>
       </div>
     </main>
+  </div>
+
+  <!-- MODAL DE SENHA DE ADMIN -->
+  <div id="modalSenhaAdmin" class="modal-overlay" style="display:none;">
+    <div class="modal-content">
+      <h3>Confirmação à Distância</h3>
+      <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 12px;">Você está fora do raio permitido para entrega. Solicite a senha de um gestor para liberar.</p>
+      <input type="password" id="inputSenhaAdmin" placeholder="Senha do Gestor" class="modal-input" />
+      <div class="modal-actions">
+        <button class="btn-secondary" onclick="fecharModalSenha()">Cancelar</button>
+        <button class="btn-primary" style="background:var(--primary)" onclick="confirmarSenhaAdmin()">Validar e Concluir</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE JUSTIFICATIVA (FALHA) -->
+  <div id="modalFalha" class="modal-overlay" style="display:none;">
+    <div class="modal-content">
+      <h3>Falha na Entrega</h3>
+      <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 12px;">Por que esta entrega não foi realizada?</p>
+      <textarea id="inputJustificativa" placeholder="Ex: Cliente ausente, endereço incorreto..." class="modal-input" style="height:80px; resize:none;"></textarea>
+      <div class="modal-actions">
+        <button class="btn-secondary" onclick="fecharModalFalha()">Cancelar</button>
+        <button class="btn-primary" style="background:#dc3545" onclick="confirmarFalha()">Registrar Falha</button>
+      </div>
+    </div>
   </div>
 
   <script src="js/entregador.js"></script>

@@ -354,8 +354,10 @@ function renderMinhasEntregas() {
     const card = document.createElement('div');
     card.className = 'card';
     
+    const isFirst = (index === 0);
+    
     if (isRotaAtiva) {
-      if (index === 0) {
+      if (isFirst) {
         card.classList.add('highlight'); // A próxima entrega!
         card.onclick = () => openDetails(e.id, true);
       } else {
@@ -386,15 +388,31 @@ function renderMinhasEntregas() {
 }
 
 function openDetails(id, isMinhaRota) {
-  currentEntrega = entregas.find(e => e.id === id);
+  // Define a entrega atual
+  currentEntrega = (isMinhaRota ? minhasEntregas : entregas).find(e => e.id === id);
   if (!currentEntrega) return;
   
   const e = currentEntrega;
   const container = document.getElementById('detailsContent');
   
-  let mapsBtn = '';
+  let googleMapsUrl = '';
   if (e.latitude && e.longitude) {
-    mapsBtn = `<a href="https://maps.google.com/?q=${e.latitude},${e.longitude}" target="_blank" class="btn-maps">📍 Abrir Navegação (Google Maps)</a>`;
+    const lat = String(e.latitude).replace(',', '.').trim();
+    const lng = String(e.longitude).replace(',', '.').trim();
+    googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+  }
+
+  let mapsBtn = googleMapsUrl ? `<a href="${googleMapsUrl}" target="_blank" class="btn-maps">📍 Abrir Navegação (Google Maps)</a>` : '';
+
+  const isLocked = isMinhaRota && localStorage.getItem('isRotaAtiva') === 'true';
+  const isFirst = (minhasEntregas.length > 0 && minhasEntregas[0].id === e.id);
+
+  document.getElementById('btnAceitar').style.display = isMinhaRota ? 'none' : 'block';
+  
+  if (isMinhaRota && isLocked && isFirst) {
+    document.getElementById('conclusionButtons').style.display = 'flex';
+  } else {
+    document.getElementById('conclusionButtons').style.display = 'none';
   }
 
   container.innerHTML = `
@@ -562,6 +580,77 @@ async function aceitarEntrega() {
   }
 }
 
+// ==========================================
+// FUNÇÕES DE DISTÂNCIA E VALIDAÇÃO DE ENTREGA
+// ==========================================
+function getDistanceFromLatLonInMeters(lat1, lon1, lat2, lon2) {
+  var R = 6371000; // Radius of the earth in m
+  var dLat = deg2rad(lat2-lat1);  
+  var dLon = deg2rad(lon2-lon1); 
+  var a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2)
+    ; 
+  var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+  var d = R * c; 
+  return d;
+}
+
+function deg2rad(deg) {
+  return deg * (Math.PI/180)
+}
+
+function tentarConcluirEntrega() {
+  if (!currentEntrega) return;
+  if (!currentEntrega.latitude || !currentEntrega.longitude) {
+    // Se a entrega não tem coordenadas originais, passa direto
+    concluirEntregaAtual();
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition((pos) => {
+    const latAtual = pos.coords.latitude;
+    const lngAtual = pos.coords.longitude;
+    const latDest = parseFloat(String(currentEntrega.latitude).replace(',', '.'));
+    const lngDest = parseFloat(String(currentEntrega.longitude).replace(',', '.'));
+    
+    const dist = getDistanceFromLatLonInMeters(latAtual, lngAtual, latDest, lngDest);
+    
+    if (dist <= 150) {
+      // Perto o suficiente
+      concluirEntregaAtual();
+    } else {
+      // Longe demais, pedir senha
+      document.getElementById('modalSenhaAdmin').style.display = 'flex';
+      document.getElementById('inputSenhaAdmin').value = '';
+    }
+  }, (err) => {
+    alert("Não foi possível acessar seu GPS. A senha de liberação será exigida.");
+    document.getElementById('modalSenhaAdmin').style.display = 'flex';
+    document.getElementById('inputSenhaAdmin').value = '';
+  }, { enableHighAccuracy: true });
+}
+
+function fecharModalSenha() {
+  document.getElementById('modalSenhaAdmin').style.display = 'none';
+}
+
+function confirmarSenhaAdmin() {
+  const senha = document.getElementById('inputSenhaAdmin').value;
+  // TODO: Em um sistema ideal, isso é checado no backend. Para o protótipo usaremos um hardcode ou fallback
+  if (senha === 'admin123') {
+    fecharModalSenha();
+    concluirEntregaAtual();
+  } else {
+    alert("Senha incorreta!");
+  }
+}
+
+// ==========================================
+// SUCESSO E FALHA
+// ==========================================
+
 async function concluirEntregaAtual() {
   if (!currentEntrega) return;
   if (!confirm("Tem certeza que finalizou a entrega no cliente?")) return;
@@ -593,6 +682,61 @@ async function concluirEntregaAtual() {
       voltarParaDashboard();
     } else {
       alert(`Erro: ${data.error || 'Não foi possível dar baixa.'}`);
+    }
+  } catch (err) {
+    console.error(err);
+    alert('Erro ao se conectar ao servidor.');
+  }
+}
+
+function abrirModalFalha() {
+  document.getElementById('modalFalha').style.display = 'flex';
+  document.getElementById('inputJustificativa').value = '';
+}
+
+function fecharModalFalha() {
+  document.getElementById('modalFalha').style.display = 'none';
+}
+
+async function confirmarFalha() {
+  if (!currentEntrega) return;
+  const justificativa = document.getElementById('inputJustificativa').value.trim();
+  if (!justificativa) {
+    alert("Por favor, informe a justificativa.");
+    return;
+  }
+  
+  if (!confirm("Confirmar que esta entrega FALHOU?")) return;
+  
+  const token = localStorage.getItem('entregador_token');
+  try {
+    const res = await fetch(`${API_URL}/api/entregador/falha_entrega`, {
+      method: 'POST',
+      headers: { 
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        entrega_id: currentEntrega.id,
+        justificativa: justificativa
+      })
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert('Falha registrada!');
+      fecharModalFalha();
+      
+      // Remove da ordem de rotas ativa
+      const savedOrderStr = localStorage.getItem('rotaOrder');
+      if (savedOrderStr) {
+        let savedOrder = JSON.parse(savedOrderStr);
+        savedOrder = savedOrder.filter(id => id !== currentEntrega.id);
+        localStorage.setItem('rotaOrder', JSON.stringify(savedOrder));
+      }
+      
+      voltarParaDashboard();
+    } else {
+      alert(`Erro: ${data.error || 'Não foi possível registrar a falha.'}`);
     }
   } catch (err) {
     console.error(err);

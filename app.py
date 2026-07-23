@@ -207,6 +207,7 @@ class Entrega(db_sql.Model):
     criado_em = db_sql.Column(db_sql.DateTime, default=datetime.datetime.utcnow)
     codigo_verificacao = db_sql.Column(db_sql.String(20), nullable=True)
     entregador_id = db_sql.Column(db_sql.Integer, nullable=True)
+    justificativa_falha = db_sql.Column(db_sql.Text, nullable=True)
 
 # ─── Utils ──────────────────────────────────────────────────────────────────
 def normalize_br_phone(phone_str):
@@ -373,6 +374,7 @@ def migrate_to_sql():
             db_sql.session.execute(db_sql.text('ALTER TABLE "entrega" ADD COLUMN nome_atendente VARCHAR(150)'))
             db_sql.session.execute(db_sql.text('ALTER TABLE "entrega" ADD COLUMN latitude VARCHAR(50)'))
             db_sql.session.execute(db_sql.text('ALTER TABLE "entrega" ADD COLUMN longitude VARCHAR(50)'))
+            db_sql.session.execute(db_sql.text('ALTER TABLE "entrega" ADD COLUMN justificativa_falha TEXT'))
             db_sql.session.commit()
         except Exception:
             db_sql.session.rollback()
@@ -536,6 +538,7 @@ def get_entregas():
         'longitude': e.longitude,
         'codigo_verificacao': e.codigo_verificacao,
         'entregador_id': e.entregador_id,
+        'justificativa_falha': e.justificativa_falha,
         'criado_em': e.criado_em.isoformat() if e.criado_em else None
     } for e in entregas])
 
@@ -562,6 +565,7 @@ def get_entregas_disponiveis():
         'latitude': e.latitude,
         'longitude': e.longitude,
         'entregador_id': e.entregador_id,
+        'justificativa_falha': e.justificativa_falha,
         'criado_em': e.criado_em.isoformat() if e.criado_em else None
     } for e in entregas])
 
@@ -797,8 +801,32 @@ def get_minhas_entregas():
         'latitude': e.latitude,
         'longitude': e.longitude,
         'entregador_id': e.entregador_id,
+        'justificativa_falha': e.justificativa_falha,
         'criado_em': e.criado_em.isoformat() if e.criado_em else None
     } for e in entregas])
+
+@app.route('/api/entregador/falha_entrega', methods=['POST'])
+@auth_required
+def falha_entrega():
+    if request.user.get('role') not in ('entregador', 'admin'):
+        return jsonify({'error': 'Acesso negado'}), 403
+        
+    data = request.json
+    entrega_id = data.get('entrega_id')
+    justificativa = data.get('justificativa', '')
+    
+    entrega = Entrega.query.get(entrega_id)
+    if not entrega:
+        return jsonify({'error': 'Entrega não encontrada'}), 404
+        
+    user_id = request.user.get('id')
+    if entrega.entregador_id != user_id and request.user.get('role') != 'admin':
+        return jsonify({'error': 'Você não tem permissão para alterar esta entrega'}), 403
+        
+    entrega.status = 'Falha na Entrega'
+    entrega.justificativa_falha = justificativa
+    db_sql.session.commit()
+    return jsonify({'success': True, 'status': entrega.status, 'justificativa_falha': entrega.justificativa_falha})
 
 @app.route('/api/entregador/concluir_entrega', methods=['POST'])
 @auth_required
