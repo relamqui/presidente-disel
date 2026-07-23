@@ -357,6 +357,22 @@
       </div>
     </div>
   </aside>
+
+  <!-- =====================
+       ADMIN ENTREGADORES VIEW
+  ======================== -->
+  <div id="adminEntregadoresView" class="view-panel" style="display:none; flex:1; flex-direction:column; background:var(--bg-panel); overflow:hidden;">
+    <header class="view-header" style="border-bottom:1px solid var(--border); padding:20px;">
+      <h2>Administração de Entregadores</h2>
+      <p style="color:var(--text-muted); font-size:14px; margin-top:4px;">Gerencie as rotas ativas e transfira entregas entre os motoboys.</p>
+    </header>
+    <div style="flex:1; overflow-y:auto; padding:20px;">
+      <div id="adminEntregadoresList" style="display:flex; flex-direction:column; gap:16px;">
+        <!-- Loaded via JS -->
+      </div>
+    </div>
+  </div>
+
 </div>
 
 
@@ -536,20 +552,6 @@
 <div id="imageLightbox" class="lightbox-overlay" style="display: none;" onclick="closeLightbox(event)">
   <span class="lightbox-close" onclick="closeLightbox(event)">&times;</span>
   <img id="lightboxImg" class="lightbox-content" src="" />
-</div>
-<!-- =====================
-     ADMIN ENTREGADORES VIEW
-======================== -->
-<div id="adminEntregadoresView" class="view-panel" style="display:none; flex:1; flex-direction:column; background:var(--bg-panel); overflow:hidden;">
-  <header class="view-header" style="border-bottom:1px solid var(--border); padding:20px;">
-    <h2>Administração de Entregadores</h2>
-    <p style="color:var(--text-muted); font-size:14px; margin-top:4px;">Gerencie as rotas ativas e transfira entregas entre os motoboys.</p>
-  </header>
-  <div style="flex:1; overflow-y:auto; padding:20px;">
-    <div id="adminEntregadoresList" style="display:flex; flex-direction:column; gap:16px;">
-      <!-- Loaded via JS -->
-    </div>
-  </div>
 </div>
 
 <!-- MODAL TRANSFERIR ROTA -->
