@@ -392,6 +392,18 @@ def migrate_to_sql():
             db_sql.session.commit()
         except Exception:
             db_sql.session.rollback()
+            
+        try:
+            db_sql.session.execute(db_sql.text('ALTER TABLE "entrega" ADD COLUMN saiu_para_entrega_em TEXT'))
+            db_sql.session.commit()
+        except Exception:
+            db_sql.session.rollback()
+            
+        try:
+            db_sql.session.execute(db_sql.text('ALTER TABLE "entrega" ADD COLUMN finalizado_em TEXT'))
+            db_sql.session.commit()
+        except Exception:
+            db_sql.session.rollback()
         
         # Add assignment columns to contact
         try:
