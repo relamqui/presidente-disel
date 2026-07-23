@@ -52,14 +52,22 @@ async function subscribePushNotifications() {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
   try {
     const registration = await navigator.serviceWorker.ready;
-    let subscription = await registration.pushManager.getSubscription();
-    if (!subscription) {
+      let subscription = await registration.pushManager.getSubscription();
+      
+      // Forçar renovação da inscrição para pegar a nova chave VAPID
+      if (subscription) {
+        try {
+          await subscription.unsubscribe();
+        } catch (e) {
+          console.error('Erro ao desinscrever', e);
+        }
+      }
+      
       const convertedVapidKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
       subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: convertedVapidKey
       });
-    }
     
     // Send subscription to server
     const token = localStorage.getItem('entregador_token');
