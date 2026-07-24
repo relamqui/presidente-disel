@@ -434,6 +434,49 @@ def migrate_to_sql():
         except Exception:
             db_sql.session.rollback()
             
+        # Migração das rotas antigas
+        try:
+            velhas = Entrega.query.filter(
+                Entrega.entregador_id.isnot(None),
+                Entrega.saiu_para_entrega_em.isnot(None),
+                Entrega.numero_rota.is_(None)
+            ).order_by(Entrega.saiu_para_entrega_em).all()
+            
+            if velhas:
+                max_nr = db_sql.session.query(db_sql.func.max(Entrega.numero_rota)).scalar() or 0
+                current_nr = max_nr + 1
+                
+                ent_por_entregador = {}
+                for e in velhas:
+                    if e.entregador_id not in ent_por_entregador:
+                        ent_por_entregador[e.entregador_id] = []
+                    ent_por_entregador[e.entregador_id].append(e)
+                    
+                for eid, lst in ent_por_entregador.items():
+                    current_rota = None
+                    for e in lst:
+                        try:
+                            dt_saiu = datetime.datetime.fromisoformat(e.saiu_para_entrega_em.replace('Z', '+00:00'))
+                        except:
+                            continue
+                            
+                        if not current_rota:
+                            current_rota = {'dt_saiu': dt_saiu, 'entregas': [e], 'nr': current_nr}
+                            current_nr += 1
+                        else:
+                            diff_seconds = (dt_saiu - current_rota['dt_saiu']).total_seconds()
+                            if diff_seconds > 30 * 60:
+                                current_rota = {'dt_saiu': dt_saiu, 'entregas': [e], 'nr': current_nr}
+                                current_nr += 1
+                            else:
+                                current_rota['entregas'].append(e)
+                                
+                        e.numero_rota = current_rota['nr']
+                db_sql.session.commit()
+        except Exception as ex:
+            print("Erro migrando rotas velhas:", ex)
+            db_sql.session.rollback()
+            
         try:
             db_sql.session.execute(db_sql.text('ALTER TABLE message ADD COLUMN ack INTEGER DEFAULT 0'))
             db_sql.session.commit()
