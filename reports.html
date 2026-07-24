@@ -310,7 +310,7 @@
     else if (status === 'Em rota') { bg='#0d1e2e'; color='#3498db'; icon='🚚'; }
     else { bg='#1e1e2e'; color='#aaa'; icon='⏳'; }
     return '<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;background:'+bg+';color:'+color+';border:1px solid '+color+'40;">'+icon+' '+status+'</span>'
-      +(falha ? '<div style="color:#ff6b6b;font-size:11px;margin-top:4px;padding:4px 8px;background:#2e0d0d;border-radius:6px;border-left:3px solid #ff6b6b;">'⚠️ Motivo: '+falha+'</div>' : '');
+      +(falha ? '<div style="color:#ff6b6b;font-size:11px;margin-top:4px;padding:4px 8px;background:#2e0d0d;border-radius:6px;border-left:3px solid #ff6b6b;">⚠️ Motivo: '+falha+'</div>' : '');
   };
 
   async function loadRotas() {
