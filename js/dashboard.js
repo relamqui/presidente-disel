@@ -80,9 +80,12 @@ window.onload = async () => {
     setTimeout(() => { overlay.style.display = 'none'; }, 360);
   }
 
-  // Para usuarios nao-admin, recarregar contatos periodicamente
-  // Forçar visão Entregas para todos como padrão inicial
-  setView('entregas');
+  // Vista padrão: admin e gestor vêem entregas, demais vêem conversas
+  if (user.role === 'admin' || user.role === 'gestor') {
+    setView('entregas');
+  } else {
+    setView('contacts');
+  }
 
   // Para usuarios nao-admin, recarregar contatos periodicamente
   if (user.role !== 'admin') {
