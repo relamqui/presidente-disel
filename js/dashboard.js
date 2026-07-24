@@ -80,12 +80,8 @@ window.onload = async () => {
     setTimeout(() => { overlay.style.display = 'none'; }, 360);
   }
 
-  // Vista padrão: admin e gestor vêem entregas, demais vêem conversas
-  if (user.role === 'admin' || user.role === 'gestor') {
-    setView('entregas');
-  } else {
-    setView('contacts');
-  }
+  // Vista padrão: todos iniciam nas Conversas
+  setView('contacts');
 
   // Para usuarios nao-admin, recarregar contatos periodicamente
   if (user.role !== 'admin') {
