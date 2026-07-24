@@ -258,17 +258,23 @@
     document.getElementById('main-tab-'+t).classList.add('active');
     document.getElementById('main-content-'+t).classList.add('active');
   }
+  let curSubNps = 'rotas';
+
   function switchSub(sec, sub) {
     const ac = 'active-'+sec;
     document.querySelectorAll('[id^="'+sec+'-sub-"]').forEach(b => b.classList.remove(ac));
     document.querySelectorAll('[id^="'+sec+'-content-"]').forEach(c => c.classList.remove('active'));
     document.getElementById(sec+'-sub-'+sub).classList.add(ac);
     document.getElementById(sec+'-content-'+sub).classList.add('active');
-  }
-  function switchSub('nps','individuais') {
-    switchSub('nps', 'individuais');
-    currentPage = 1;
-    loadMotivosIndividuais();
+    if (sec === 'nps') {
+      curSubNps = sub;
+      if (sub === 'rotas') loadRotas();
+      else if (sub === 'individuais') loadIndividuais();
+      else if (sub === 'metricas') loadMetricas();
+    } else if (sec === 'tempo') {
+      if (sub === 'filiais') loadTeF();
+      else if (sub === 'atendentes') loadTeA();
+    }
   }
   function tog(id) { document.getElementById(id).classList.toggle('open'); }
 
@@ -281,14 +287,88 @@
   }
 
   function loadAll() {
-    currentPage = 1;
-    loadMotivosGeral();
-    loadNpsA();
+    loadRotas();
     loadTeF();
     loadTeA();
-    // reload individual se estiver visível
-    const indivVisible = document.getElementById('nps-content-individuais').classList.contains('active');
-    if (indivVisible) loadMotivosIndividuais();
+  }
+
+  async function loadRotas() {
+    const el = document.getElementById('rotas-box');
+    el.innerHTML = '<div class="spinner nps-spin"></div>';
+    try {
+      const r = await fetch(API+'/api/reports/entregas/rotas'+qp(), {headers:{Authorization:'Bearer '+tok()}});
+      const j = await r.json();
+      if(!r.ok||!j.success){el.innerHTML=errH(j.error||'Erro');return;}
+      const d = j.data||[];
+      if(!d.length){el.innerHTML=empH('Nenhuma rota encontrada no período.');return;}
+      el.innerHTML = d.map(rota => {
+        const sub = rota.entregas.map(e => '<div style="padding:10px 15px; border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">'
+          +'<div><strong>'+e.nome_cliente+'</strong><div style="font-size:12px;color:var(--text-secondary);">'+e.localizacao+'</div></div>'
+          +'<div style="text-align:right;"><span style="font-size:12px; padding:3px 10px; border-radius:10px; background:var(--bg-base); font-weight:600;">'+e.status+'</span>'
+          +(e.justificativa_falha ? '<div style="color:#ff6b6b; font-size:11px; margin-top:4px;">Motivo: '+e.justificativa_falha+'</div>' : '')
+          +'</div></div>').join('');
+        return '<div style="margin-bottom:15px; background:var(--bg-panel); border:1px solid var(--border-color); border-radius:12px; overflow:hidden;">'
+          +'<div style="padding:15px; display:flex; justify-content:space-between; align-items:center; background:var(--bg-panel);">'
+          +'<div style="display:flex; align-items:center; gap:12px;">'
+          +'<div style="width:42px;height:42px;border-radius:10px;background:var(--primary);color:white;display:flex;align-items:center;justify-content:center;font-size:20px;">🚚</div>'
+          +'<div><div style="font-weight:700;font-size:16px;">Rota #'+rota.numero_rota+'</div><div style="color:var(--text-secondary);font-size:13px;">'+rota.entregador_nome+' • '+rota.entregas.length+' entregas</div></div></div>'
+          +'<div style="text-align:right;"><div style="font-size:12px;color:var(--text-secondary);">Saiu: '+(rota.saiu_para_entrega_em||'-')+'</div>'
+          +'<div style="font-size:12px;color:var(--text-secondary);">Fim: '+(rota.finalizado_em||'Em andamento')+'</div></div></div>'
+          +'<div style="background:var(--bg-base);">'+sub+'</div></div>';
+      }).join('');
+    } catch(e){el.innerHTML=errH('Erro de conexão.');}
+  }
+
+  async function loadIndividuais() {
+    const el = document.getElementById('individuais-box');
+    el.innerHTML = '<div class="spinner nps-spin"></div>';
+    try {
+      const r = await fetch(API+'/api/reports/entregas/individuais'+qp(), {headers:{Authorization:'Bearer '+tok()}});
+      const j = await r.json();
+      if(!r.ok||!j.success){el.innerHTML=errH(j.error||'Erro');return;}
+      const d = j.data||[];
+      if(!d.length){el.innerHTML=empH('Nenhuma entrega no período.');return;}
+      const rows = d.map(item => {
+        const falha = item.justificativa_falha ? '<div style="color:#ff6b6b;font-size:11px;margin-top:2px;">Motivo: '+item.justificativa_falha+'</div>' : '';
+        return '<tr>'
+          +'<td><div class="att-info"><span class="att-name">'+item.nome_cliente+'</span><span class="att-sub">'+item.localizacao+'</span></div></td>'
+          +'<td>'+item.entregador_nome+'</td>'
+          +'<td>'+(item.numero_rota ? 'Rota #'+item.numero_rota : '-')+'</td>'
+          +'<td><span style="font-weight:600;font-size:12px;padding:2px 8px;border-radius:10px;background:var(--bg-base);">'+item.status+'</span>'+falha+'</td>'
+          +'<td>'+item.criado_em+'</td>'
+          +'</tr>';
+      }).join('');
+      el.innerHTML = '<div class="ranking-table-wrap"><table class="rtable"><thead><tr>'
+        +'<th>Cliente / Endereço</th><th>Entregador</th><th>Rota</th><th>Status</th><th>Criada em</th>'
+        +'</tr></thead><tbody>'+rows+'</tbody></table></div>';
+    } catch(e){el.innerHTML=errH('Erro de conexão.');}
+  }
+
+  async function loadMetricas() {
+    const el = document.getElementById('metricas-box');
+    el.innerHTML = '<div class="spinner nps-spin"></div>';
+    try {
+      const r = await fetch(API+'/api/reports/entregas/metricas_entregador'+qp(), {headers:{Authorization:'Bearer '+tok()}});
+      const j = await r.json();
+      if(!r.ok||!j.success){el.innerHTML=errH(j.error||'Erro');return;}
+      const d = j.data||[];
+      if(!d.length){el.innerHTML=empH('Nenhum dado de entregador no período.');return;}
+      const fmtMin = s => { if(!s) return '-'; const m=Math.floor(s/60),sc=Math.floor(s%60); return m+'m '+sc+'s'; };
+      const rows = d.map((item,i) => {
+        const meds = ['🥇','🥈','🥉'];
+        return '<tr>'
+          +'<td><div class="rank-pos"><span class="medal">'+(meds[i]||'')+'</span><span>#'+(i+1)+'</span></div></td>'
+          +'<td><span style="font-weight:600;">'+item.entregador_nome+'</span></td>'
+          +'<td>'+item.qtd_rotas+'</td>'
+          +'<td>'+item.qtd_entregas+'</td>'
+          +'<td style="color:var(--text-secondary);font-weight:500;">'+fmtMin(item.avg_tempo_assumir)+'</td>'
+          +'<td style="color:var(--primary);font-weight:500;">'+fmtMin(item.avg_tempo_entrega)+'</td>'
+          +'</tr>';
+      }).join('');
+      el.innerHTML = '<div class="ranking-table-wrap"><table class="rtable"><thead><tr>'
+        +'<th>#</th><th>Entregador</th><th>Rotas</th><th>Entregas</th><th>Média p/ Iniciar</th><th>Média p/ Entregar</th>'
+        +'</tr></thead><tbody>'+rows+'</tbody></table></div>';
+    } catch(e){el.innerHTML=errH('Erro de conexão.');}
   }
 
   /* ── Helpers ── */
