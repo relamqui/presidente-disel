@@ -990,57 +990,72 @@ def get_historico_rotas():
     entregas = Entrega.query.filter(
         Entrega.entregador_id.isnot(None),
         Entrega.saiu_para_entrega_em.isnot(None)
-    ).order_by(Entrega.saiu_para_entrega_em.desc()).all()
+    ).order_by(Entrega.entregador_id, Entrega.saiu_para_entrega_em).all()
 
-    # Organiza entregas por entregador
-    rotas_por_entregador = {}
     users = {u.id: u.name for u in User.query.filter_by(role='entregador').all()}
-
-    for e in entregas:
-        eid = e.entregador_id
-        # Cria uma "rota" baseada no horário de saída (aproximado por hora para agrupar pacotes que saíram juntos)
-        # Vamos usar a data e hora ignorando minutos/segundos para agrupar as que saíram no mesmo batch
-        if not e.saiu_para_entrega_em: continue
-        
-        try:
-            dt = datetime.datetime.fromisoformat(e.saiu_para_entrega_em.replace('Z', '+00:00'))
-            # Agrupa por hora
-            batch_key = dt.strftime("%Y-%m-%d %H:00")
-        except:
-            batch_key = e.saiu_para_entrega_em[:13]
-
-        if eid not in rotas_por_entregador:
-            rotas_por_entregador[eid] = {}
-        
-        if batch_key not in rotas_por_entregador[eid]:
-            rotas_por_entregador[eid][batch_key] = {
-                'entregador_nome': users.get(eid, f'Entregador #{eid}'),
-                'saiu_para_entrega_em': e.saiu_para_entrega_em,
-                'entregas': [],
-                'finalizado_em': e.finalizado_em
-            }
-        
-        # Se encontrou uma entrega concluída com horário maior, atualiza o tempo final da rota
-        if e.finalizado_em:
-            current_fin = rotas_por_entregador[eid][batch_key]['finalizado_em']
-            if not current_fin or e.finalizado_em > current_fin:
-                rotas_por_entregador[eid][batch_key]['finalizado_em'] = e.finalizado_em
-
-        rotas_por_entregador[eid][batch_key]['entregas'].append({
-            'id': e.id,
-            'cliente': e.nome_cliente,
-            'status': e.status,
-            'justificativa': e.justificativa_falha,
-            'finalizado_em': e.finalizado_em
-        })
-
-    # Converte para lista plana
+    
     historico = []
-    for eid, batches in rotas_por_entregador.items():
-        for b_key, b_data in batches.items():
-            historico.append(b_data)
+    
+    # Agrupar entregas por entregador
+    entregas_por_entregador = {}
+    for e in entregas:
+        if e.entregador_id not in entregas_por_entregador:
+            entregas_por_entregador[e.entregador_id] = []
+        entregas_por_entregador[e.entregador_id].append(e)
+        
+    for eid, lista_entregas in entregas_por_entregador.items():
+        entregador_nome = users.get(eid, f'Entregador #{eid}')
+        
+        current_rota = None
+        for e in lista_entregas:
+            try:
+                dt_saiu = datetime.datetime.fromisoformat(e.saiu_para_entrega_em.replace('Z', '+00:00'))
+            except:
+                continue
+                
+            if not current_rota:
+                current_rota = {
+                    'entregador_nome': entregador_nome,
+                    'saiu_para_entrega_em': e.saiu_para_entrega_em,
+                    'dt_saiu': dt_saiu,
+                    'entregas': [],
+                    'finalizado_em': e.finalizado_em
+                }
+            else:
+                # Verifica se pertence à mesma rota (diferença <= 30 minutos de saída)
+                diff_seconds = (dt_saiu - current_rota['dt_saiu']).total_seconds()
+                if diff_seconds > 30 * 60:
+                    # Diferença maior que 30 min, salva a rota atual e começa uma nova
+                    historico.append(current_rota)
+                    current_rota = {
+                        'entregador_nome': entregador_nome,
+                        'saiu_para_entrega_em': e.saiu_para_entrega_em,
+                        'dt_saiu': dt_saiu,
+                        'entregas': [],
+                        'finalizado_em': e.finalizado_em
+                    }
+                    
+            # Adiciona a entrega na rota atual
+            current_rota['entregas'].append({
+                'id': e.id,
+                'cliente': e.nome_cliente,
+                'status': e.status,
+                'justificativa': e.justificativa_falha,
+                'finalizado_em': e.finalizado_em
+            })
             
-    # Ordena da rota mais recente para a mais antiga
+            # Atualiza o finalizado_em da rota para ser o mais recente
+            if e.finalizado_em:
+                if not current_rota['finalizado_em'] or e.finalizado_em > current_rota['finalizado_em']:
+                    current_rota['finalizado_em'] = e.finalizado_em
+                    
+        if current_rota:
+            historico.append(current_rota)
+
+    # Limpar dt_saiu auxiliar e ordenar por saída decrescente
+    for rota in historico:
+        rota.pop('dt_saiu', None)
+        
     historico.sort(key=lambda x: x['saiu_para_entrega_em'], reverse=True)
 
     return jsonify(historico)
