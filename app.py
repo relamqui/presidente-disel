@@ -190,6 +190,26 @@ class SlaHistory(db_sql.Model):
     finalizado_em = db_sql.Column(db_sql.Text, nullable=True)
     criado_em = db_sql.Column(db_sql.Text, nullable=False)
 
+class TempoEspera(db_sql.Model):
+    __tablename__ = 'tempo_espera'
+    id = db_sql.Column(db_sql.Integer, primary_key=True, autoincrement=True)
+    numero_cliente = db_sql.Column(db_sql.String(50), nullable=False)
+    nome_atendente = db_sql.Column(db_sql.String(100), nullable=True)
+    setor_filial = db_sql.Column(db_sql.String(150), nullable=True)
+    inicio = db_sql.Column(db_sql.DateTime, nullable=False, default=get_now)
+    atendido = db_sql.Column(db_sql.DateTime, nullable=True)
+    finalizado = db_sql.Column(db_sql.DateTime, nullable=True)
+
+class NPSVotos(db_sql.Model):
+    __tablename__ = 'nps_votos'
+    id = db_sql.Column(db_sql.Integer, primary_key=True, autoincrement=True)
+    numero = db_sql.Column(db_sql.String(50))
+    voto = db_sql.Column(db_sql.String(50), nullable=False)
+    atendente = db_sql.Column(db_sql.String(150))
+    filial = db_sql.Column(db_sql.String(150))
+    setor = db_sql.Column(db_sql.String(150))
+    timestamp = db_sql.Column(db_sql.DateTime, default=get_now)
+
 class Entrega(db_sql.Model):
     id = db_sql.Column(db_sql.Integer, primary_key=True)
     nome_peca = db_sql.Column(db_sql.String(150), nullable=False)
@@ -435,6 +455,42 @@ def migrate_to_sql():
             db_sql.session.rollback()
             
         # Migração das rotas antigas
+        try:
+            db_sql.session.execute(db_sql.text("""
+                CREATE TABLE IF NOT EXISTS tempo_espera (
+                    id SERIAL PRIMARY KEY,
+                    numero_cliente VARCHAR(50) NOT NULL,
+                    nome_atendente VARCHAR(100),
+                    setor_filial VARCHAR(150),
+                    inicio TIMESTAMP NOT NULL DEFAULT NOW(),
+                    atendido TIMESTAMP,
+                    finalizado TIMESTAMP
+                )
+            """))
+            db_sql.session.commit()
+            print("[MIGRATE] Tabela tempo_espera verificada/criada.")
+        except Exception as e_te:
+            db_sql.session.rollback()
+            print(f"[MIGRATE] tempo_espera: {e_te}")
+
+        try:
+            db_sql.session.execute(db_sql.text("""
+                CREATE TABLE IF NOT EXISTS nps_votos (
+                    id SERIAL PRIMARY KEY,
+                    numero VARCHAR(50),
+                    voto VARCHAR(50) NOT NULL,
+                    atendente VARCHAR(150),
+                    filial VARCHAR(150),
+                    setor VARCHAR(150),
+                    timestamp TIMESTAMP NOT NULL DEFAULT NOW()
+                )
+            """))
+            db_sql.session.commit()
+            print("[MIGRATE] Tabela nps_votos verificada/criada.")
+        except Exception as e_nps:
+            db_sql.session.rollback()
+            print(f"[MIGRATE] nps_votos: {e_nps}")
+            
         try:
             velhas = Entrega.query.filter(
                 Entrega.entregador_id.isnot(None),
