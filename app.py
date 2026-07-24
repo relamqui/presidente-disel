@@ -210,6 +210,7 @@ class Entrega(db_sql.Model):
     justificativa_falha = db_sql.Column(db_sql.Text, nullable=True)
     saiu_para_entrega_em = db_sql.Column(db_sql.Text, nullable=True)
     finalizado_em = db_sql.Column(db_sql.Text, nullable=True)
+    numero_rota = db_sql.Column(db_sql.Integer, nullable=True)
 
 # ─── Utils ──────────────────────────────────────────────────────────────────
 def normalize_br_phone(phone_str):
@@ -849,7 +850,6 @@ def aceitar_entrega():
         
     entrega.status = 'Saiu para entrega'
     entrega.entregador_id = request.user.get('id')
-    entrega.saiu_para_entrega_em = datetime.datetime.utcnow().isoformat()
     db_sql.session.commit()
     return jsonify({'success': True, 'status': entrega.status})
 
@@ -986,88 +986,48 @@ def get_historico_rotas():
     if request.user.get('role') not in ('admin', 'gestor'):
         return jsonify({'error': 'Acesso negado'}), 403
 
-    # Busca entregas que já saíram para entrega e estão vinculadas a um entregador
+    # Busca entregas que têm um numero_rota definido
     entregas = Entrega.query.filter(
         Entrega.entregador_id.isnot(None),
-        Entrega.saiu_para_entrega_em.isnot(None)
-    ).order_by(Entrega.entregador_id, Entrega.saiu_para_entrega_em).all()
+        Entrega.numero_rota.isnot(None)
+    ).order_by(Entrega.numero_rota.desc()).all()
 
     users = {u.id: u.name for u in User.query.filter_by(role='entregador').all()}
     
-    historico = []
+    # Agrupar entregas por numero_rota
+    rotas_dict = {}
     
-    # Agrupar entregas por entregador
-    entregas_por_entregador = {}
     for e in entregas:
-        if e.entregador_id not in entregas_por_entregador:
-            entregas_por_entregador[e.entregador_id] = []
-        entregas_por_entregador[e.entregador_id].append(e)
-        
-    for eid, lista_entregas in entregas_por_entregador.items():
-        entregador_nome = users.get(eid, f'Entregador #{eid}')
-        
-        current_rota = None
-        for e in lista_entregas:
-            try:
-                dt_saiu = datetime.datetime.fromisoformat(e.saiu_para_entrega_em.replace('Z', '+00:00'))
-            except:
-                continue
-                
-            if not current_rota:
-                current_rota = {
-                    'entregador_nome': entregador_nome,
-                    'saiu_para_entrega_em': e.saiu_para_entrega_em,
-                    'dt_saiu': dt_saiu,
-                    'entregas': [],
-                    'finalizado_em': e.finalizado_em
-                }
-            else:
-                # Verifica se pertence à mesma rota
-                # Condição 1: Diferença de saída maior que 30 minutos
-                diff_seconds = (dt_saiu - current_rota['dt_saiu']).total_seconds()
-                
-                # Condição 2: A rota anterior já foi totalmente finalizada ANTES desta nova entrega sair
-                # Para saber se foi totalmente finalizada, todas as entregas devem ter status 'Entregue' ou 'Falha'
-                # E o finalizado_em máximo da rota deve ser MENOR que o saiu_para_entrega_em da nova entrega
-                todas_finalizadas = all(x['status'] in ('Entregue', 'Falha na Entrega') for x in current_rota['entregas'])
-                rota_finalizada_antes = False
-                if todas_finalizadas and current_rota['finalizado_em']:
-                    if e.saiu_para_entrega_em > current_rota['finalizado_em']:
-                        rota_finalizada_antes = True
-
-                if diff_seconds > 30 * 60 or rota_finalizada_antes:
-                    # Diferença maior que 30 min ou rota anterior já terminou, salva a atual e começa uma nova
-                    historico.append(current_rota)
-                    current_rota = {
-                        'entregador_nome': entregador_nome,
-                        'saiu_para_entrega_em': e.saiu_para_entrega_em,
-                        'dt_saiu': dt_saiu,
-                        'entregas': [],
-                        'finalizado_em': e.finalizado_em
-                    }
-                    
-            # Adiciona a entrega na rota atual
-            current_rota['entregas'].append({
-                'id': e.id,
-                'cliente': e.nome_cliente,
-                'status': e.status,
-                'justificativa': e.justificativa_falha,
+        nr = e.numero_rota
+        if nr not in rotas_dict:
+            entregador_nome = users.get(e.entregador_id, f'Entregador #{e.entregador_id}')
+            rotas_dict[nr] = {
+                'numero_rota': nr,
+                'entregador_nome': entregador_nome,
+                'saiu_para_entrega_em': e.saiu_para_entrega_em,
+                'entregas': [],
                 'finalizado_em': e.finalizado_em
-            })
+            }
             
-            # Atualiza o finalizado_em da rota para ser o mais recente
-            if e.finalizado_em:
-                if not current_rota['finalizado_em'] or e.finalizado_em > current_rota['finalizado_em']:
-                    current_rota['finalizado_em'] = e.finalizado_em
-                    
-        if current_rota:
-            historico.append(current_rota)
-
-    # Limpar dt_saiu auxiliar e ordenar por saída decrescente
-    for rota in historico:
-        rota.pop('dt_saiu', None)
+        # Adiciona a entrega na rota atual
+        rotas_dict[nr]['entregas'].append({
+            'id': e.id,
+            'cliente': e.nome_cliente,
+            'status': e.status,
+            'justificativa': e.justificativa_falha,
+            'finalizado_em': e.finalizado_em
+        })
         
-    historico.sort(key=lambda x: x['saiu_para_entrega_em'], reverse=True)
+        # Atualiza o finalizado_em da rota para ser o mais recente
+        if e.finalizado_em:
+            if not rotas_dict[nr]['finalizado_em'] or e.finalizado_em > rotas_dict[nr]['finalizado_em']:
+                rotas_dict[nr]['finalizado_em'] = e.finalizado_em
+                
+    # Converte o dict para lista
+    historico = list(rotas_dict.values())
+    
+    # Ordena da rota mais recente para a mais antiga pelo numero_rota
+    historico.sort(key=lambda x: x['numero_rota'], reverse=True)
 
     return jsonify(historico)
 
@@ -1112,6 +1072,22 @@ def otimizar_rota():
         
         if res.status_code != 200:
             return jsonify({'error': f'Falha no OSRM: {res.status_code}'}), 400
+            
+        # O OSRM retornou sucesso, o que significa que o motoboy iniciou uma Rota válida.
+        # Vamos gerar um numero_rota e atualizar as entregas pendentes dele
+        user_id = request.user.get('id')
+        entregas_ativas = Entrega.query.filter_by(entregador_id=user_id, status='Saiu para entrega', numero_rota=None).all()
+        
+        if entregas_ativas:
+            max_rota = db_sql.session.query(db_sql.func.max(Entrega.numero_rota)).scalar() or 0
+            novo_numero_rota = max_rota + 1
+            agora = datetime.datetime.utcnow().isoformat()
+            
+            for e in entregas_ativas:
+                e.numero_rota = novo_numero_rota
+                e.saiu_para_entrega_em = agora
+                
+            db_sql.session.commit()
             
         return jsonify(res.json())
     except Exception as e:

@@ -633,7 +633,7 @@ async function loadRouteHistory() {
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
             <h4 style="margin: 0; color: var(--green); display: flex; align-items: center; gap: 8px;">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-              Rota: ${rota.entregador_nome}
+              Rota #${rota.numero_rota}: ${rota.entregador_nome}
             </h4>
             <div style="font-size: 12px; color: var(--text-secondary); text-align: right;">
               <div>Saiu: <strong style="color:var(--text-primary);">${saiuTime}</strong></div>
