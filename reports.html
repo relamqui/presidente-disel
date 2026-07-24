@@ -3,227 +3,521 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>WP CRM — Relatórios SLA</title>
+  <title>WP CRM — Relatórios</title>
+  <meta name="description" content="Painel de relatórios: Motivos de Finalização e Tempo de Espera por filial, setor e atendente." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/dashboard.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
-    body {
-      height: auto;
-      overflow: auto;
+    :root {
+      --green:  #00c896;
+      --blue:   #3498db;
+      --cyan:   #00c8e0;
+      --yellow: #f5a623;
+      --red:    #e74c3c;
+      --purple: #9b59b6;
+      --venda-color: #00c896;
+      --orc-color:   #f5a623;
+      --outro-color: #9b59b6;
     }
-    .admin-container {
-      padding: 40px;
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-    .admin-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 30px;
-    }
-    .back-btn {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      color: var(--text-secondary);
-      text-decoration: none;
-      font-size: 14px;
-      margin-bottom: 20px;
-      border: none;
-      background: none;
-      cursor: pointer;
-    }
-    .back-btn:hover {
-      color: var(--text-primary);
-    }
-    
-    .filters-section {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 20px;
-      margin-bottom: 24px;
-      display: flex;
-      gap: 16px;
-      align-items: flex-end;
-    }
-    .form-group {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-    .form-group label {
-      font-size: 13px;
-      color: var(--text-secondary);
-    }
-    .form-group input {
-      padding: 10px;
-      border-radius: 8px;
-      background: var(--bg-input);
-      border: 1px solid var(--border);
-      color: white;
-      outline: none;
-    }
-    .btn-primary {
-      background: var(--green);
-      color: white;
-      border: none;
-      padding: 10px 20px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-weight: 600;
-    }
+    body { height:auto; overflow:auto; background-color:var(--bg-app); color:var(--text-primary); font-family:'Inter',sans-serif; }
+    .page-container { max-width:1400px; margin:0 auto; padding:32px 40px; }
 
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 20px;
-      background: var(--bg-card);
-      border-radius: 12px;
-      overflow: hidden;
-    }
-    th, td {
-      padding: 14px;
-      text-align: left;
-      border-bottom: 1px solid var(--border);
-      font-size: 13px;
-    }
-    th {
-      background: rgba(0, 0, 0, 0.2);
-      color: var(--text-secondary);
-      font-weight: 600;
-    }
-    td {
-      color: var(--text-primary);
-    }
-    .time-badge {
-      background: rgba(255, 255, 255, 0.1);
-      padding: 4px 8px;
-      border-radius: 6px;
-      font-family: monospace;
-    }
+    .back-btn { display:flex; align-items:center; gap:8px; color:var(--text-secondary); background:none; border:none; font-size:14px; cursor:pointer; margin-bottom:16px; font-family:'Inter',sans-serif; transition:color .2s; }
+    .back-btn:hover { color:var(--text-primary); }
+    .page-title h1 { font-size:26px; font-weight:800; margin:0 0 4px; color:var(--text-primary); }
+    .page-title span { font-size:13px; color:var(--text-secondary); }
+
+    .filters-bar { background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:18px 24px; display:flex; gap:16px; align-items:flex-end; flex-wrap:wrap; margin:24px 0; }
+    .form-group { display:flex; flex-direction:column; gap:6px; }
+    .form-group label { font-size:11px; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:.06em; }
+    .form-group input { padding:10px 14px; border-radius:8px; background:var(--bg-input); border:1px solid var(--border); color:white; outline:none; font-size:14px; font-family:'Inter',sans-serif; min-width:145px; }
+    .btn-filter { background:rgba(255,255,255,.08); color:var(--text-primary); border:1px solid var(--border); padding:10px 22px; border-radius:8px; cursor:pointer; font-weight:600; font-size:14px; font-family:'Inter',sans-serif; transition:background .2s,transform .1s; }
+    .btn-filter:hover { background:rgba(255,255,255,.13); transform:translateY(-1px); }
+
+    .main-tabs { display:flex; gap:0; border-bottom:2px solid var(--border); margin-bottom:28px; }
+    .main-tab-btn { padding:14px 28px; border:none; background:transparent; color:var(--text-secondary); font-size:15px; font-weight:600; cursor:pointer; font-family:'Inter',sans-serif; border-bottom:3px solid transparent; margin-bottom:-2px; transition:color .2s,border-color .2s; }
+    .main-tab-btn.nps.active    { color:var(--text-primary); border-bottom-color:var(--green); }
+    .main-tab-btn.tempo.active  { color:var(--text-primary); border-bottom-color:var(--cyan); }
+    .main-tab-btn.volume.active { color:var(--text-primary); border-bottom-color:var(--purple); }
+    .main-tab-content { display:none; }
+    .main-tab-content.active { display:block; }
+
+    .sub-tabs { display:flex; gap:4px; background:var(--bg-card); border:1px solid var(--border); border-radius:12px; padding:4px; margin-bottom:24px; width:fit-content; }
+    .sub-tab-btn { padding:8px 20px; border-radius:9px; border:none; background:transparent; color:var(--text-secondary); font-size:13px; font-weight:500; cursor:pointer; font-family:'Inter',sans-serif; transition:all .2s; }
+    .sub-tab-btn.active-nps   { background:linear-gradient(135deg,#00c896,#00a87a); color:white; font-weight:700; }
+    .sub-tab-btn.active-tempo { background:linear-gradient(135deg,#00c8e0,#0098b0); color:white; font-weight:700; }
+    .sub-tab-btn.active-volume{ background:linear-gradient(135deg,#9b59b6,#8e44ad); color:white; font-weight:700; }
+    .sub-tab-content { display:none; }
+    .sub-tab-content.active { display:block; }
+
+    /* ── Pizza chart area ── */
+    .chart-wrapper { display:flex; gap:40px; align-items:center; flex-wrap:wrap; padding:32px; background:var(--bg-card); border:1px solid var(--border); border-radius:16px; }
+    .chart-canvas-wrap { width:280px; height:280px; flex-shrink:0; position:relative; }
+    .chart-legend { display:flex; flex-direction:column; gap:20px; flex:1; min-width:200px; }
+    .legend-item { display:flex; align-items:center; gap:14px; }
+    .legend-dot { width:16px; height:16px; border-radius:50%; flex-shrink:0; }
+    .legend-info { display:flex; flex-direction:column; }
+    .legend-label { font-size:13px; font-weight:600; color:var(--text-secondary); }
+    .legend-count { font-size:28px; font-weight:800; line-height:1; margin-top:2px; }
+    .legend-pct { font-size:12px; color:var(--text-secondary); margin-top:2px; }
+    .chart-total-box { margin-top:24px; padding-top:20px; border-top:1px solid var(--border); display:flex; flex-direction:column; }
+    .chart-total-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--text-secondary); }
+    .chart-total-count { font-size:36px; font-weight:800; color:var(--text-primary); }
+
+    /* ── Filial blocks ── */
+    .filial-block { background:var(--bg-card); border:1px solid var(--border); border-radius:14px; margin-bottom:16px; overflow:hidden; transition:box-shadow .2s; }
+    .filial-block:hover { box-shadow:0 4px 24px rgba(0,0,0,.18); }
+    .filial-header { display:flex; align-items:center; justify-content:space-between; padding:18px 22px; cursor:pointer; user-select:none; transition:background .2s; }
+    .filial-header:hover { background:rgba(255,255,255,.03); }
+    .filial-header-left { display:flex; align-items:center; gap:14px; }
+    .filial-icon { width:42px; height:42px; border-radius:11px; display:flex; align-items:center; justify-content:center; font-size:18px; }
+    .filial-icon.ni { background:linear-gradient(135deg,rgba(0,200,150,.2),rgba(52,152,219,.2)); }
+    .filial-icon.ti { background:linear-gradient(135deg,rgba(0,200,224,.2),rgba(52,152,219,.2)); }
+    .filial-icon.vi { background:linear-gradient(135deg,rgba(155,89,182,.2),rgba(52,152,219,.2)); }
+    .filial-name { font-size:16px; font-weight:700; }
+    .filial-meta { font-size:12px; color:var(--text-secondary); margin-top:2px; }
+    .filial-header-right { display:flex; align-items:center; gap:18px; }
+    .chevron { transition:transform .3s; color:var(--text-secondary); }
+    .filial-block.open .chevron { transform:rotate(180deg); }
+    .filial-body { display:none; padding:0 14px 14px; }
+    .filial-block.open .filial-body { display:block; }
+
+    .setores-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:12px; }
+    .setor-card { background:rgba(255,255,255,.03); border:1px solid var(--border); border-radius:12px; padding:16px; transition:transform .2s,border-color .2s; }
+    .setor-card:hover { transform:translateY(-2px); }
+    .setor-card-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; }
+    .setor-name { font-size:14px; font-weight:600; }
+    .setor-meta { font-size:11px; color:var(--text-secondary); margin-top:2px; }
+
+    .media-nota { font-size:20px; font-weight:800; }
+    .media-nota.alta  { color:var(--green); }
+    .media-nota.media { color:var(--yellow); }
+    .media-nota.baixa { color:var(--red); }
+
+    .nps-bars { display:flex; flex-direction:column; gap:6px; margin-top:10px; }
+    .nps-bar-row { display:flex; align-items:center; gap:8px; font-size:12px; }
+    .nps-bar-label { width:70px; color:var(--text-secondary); }
+    .nps-bar-track { flex:1; height:6px; background:rgba(255,255,255,.08); border-radius:10px; overflow:hidden; }
+    .nps-bar-fill { height:100%; border-radius:10px; transition:width .5s ease; }
+    .nps-bar-fill.prom { background:var(--green); }
+    .nps-bar-fill.neut { background:var(--yellow); }
+    .nps-bar-fill.detr { background:var(--red); }
+    .nps-bar-count { width:22px; text-align:right; color:var(--text-secondary); }
+
+    .score-badge { display:inline-flex; flex-direction:column; align-items:center; justify-content:center; min-width:52px; height:52px; border-radius:10px; font-weight:800; border:2px solid; padding:0 8px; }
+    .score-badge .sv { font-size:14px; line-height:1; }
+    .score-badge .sl { font-size:9px; opacity:.65; margin-top:2px; text-transform:uppercase; }
+    .score-badge.top { color:var(--green);  border-color:var(--green);  background:rgba(0,200,150,.1); }
+    .score-badge.mid { color:var(--blue);   border-color:var(--blue);   background:rgba(52,152,219,.1); }
+    .score-badge.low { color:var(--yellow); border-color:var(--yellow); background:rgba(245,166,35,.1); }
+    .score-badge.bot { color:var(--red);    border-color:var(--red);    background:rgba(231,76,60,.1); }
+
+    .tempo-row { display:flex; align-items:center; justify-content:space-between; padding:7px 0; border-bottom:1px solid rgba(255,255,255,.05); font-size:13px; }
+    .tempo-row:last-child { border-bottom:none; }
+    .tempo-label { color:var(--text-secondary); }
+    .tempo-value { font-weight:700; font-family:monospace; font-size:13px; }
+    .tempo-value.fast   { color:var(--green); }
+    .tempo-value.medium { color:var(--yellow); }
+    .tempo-value.slow   { color:var(--red); }
+
+    .stat-inline { text-align:right; }
+    .stat-val { font-size:18px; font-weight:800; }
+    .stat-lbl { font-size:11px; color:var(--text-secondary); margin-top:1px; }
+
+    .ranking-table-wrap { overflow-x:auto; border-radius:14px; border:1px solid var(--border); background:var(--bg-card); }
+    table.rtable { width:100%; border-collapse:collapse; }
+    table.rtable th { padding:13px 16px; text-align:left; font-size:11px; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:.07em; background:rgba(0,0,0,.2); border-bottom:1px solid var(--border); }
+    table.rtable td { padding:13px 16px; font-size:13px; color:var(--text-primary); border-bottom:1px solid rgba(255,255,255,.04); }
+    table.rtable tr:last-child td { border-bottom:none; }
+    table.rtable tr:hover td { background:rgba(255,255,255,.02); }
+
+    .rank-pos { display:flex; align-items:center; gap:8px; font-weight:700; color:var(--text-secondary); }
+    .medal { font-size:18px; }
+    .att-info { display:flex; flex-direction:column; }
+    .att-name { font-weight:600; font-size:14px; }
+    .att-sub  { font-size:12px; color:var(--text-secondary); margin-top:1px; }
+
+    .pill { display:inline-flex; align-items:center; padding:3px 10px; border-radius:20px; font-size:12px; font-weight:600; white-space:nowrap; }
+    .pill.prom { background:rgba(0,200,150,.15); color:var(--green); }
+    .pill.neut { background:rgba(245,166,35,.15); color:var(--yellow); }
+    .pill.detr { background:rgba(231,76,60,.15);  color:var(--red); }
+    .pill.venda { background:rgba(0,200,150,.18); color:var(--green); border:1px solid rgba(0,200,150,.3); }
+    .pill.orc   { background:rgba(245,166,35,.18); color:var(--yellow); border:1px solid rgba(245,166,35,.3); }
+    .pill.outro { background:rgba(155,89,182,.18); color:var(--purple); border:1px solid rgba(155,89,182,.3); }
+
+    .empty-state { text-align:center; padding:56px 20px; color:var(--text-secondary); }
+    .empty-icon  { font-size:38px; margin-bottom:10px; }
+    .spinner { display:flex; justify-content:center; align-items:center; padding:56px; }
+    .spinner::after { content:''; width:34px; height:34px; border:3px solid rgba(255,255,255,.08); border-radius:50%; animation:spin .8s linear infinite; }
+    .spinner.nps-spin::after   { border-top-color:var(--green); }
+    .spinner.tempo-spin::after { border-top-color:var(--cyan); }
+    .spinner.volume-spin::after{ border-top-color:var(--purple); }
+    @keyframes spin { to { transform:rotate(360deg); } }
+
+    /* ── Individual chats table ── */
+    .indiv-detalhes { font-size:12px; color:var(--text-secondary); max-width:220px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .btn-goto-chat { display:inline-flex; align-items:center; gap:6px; padding:6px 14px; border-radius:8px; border:1px solid rgba(0,200,150,.4); background:rgba(0,200,150,.08); color:var(--green); font-size:12px; font-weight:600; cursor:pointer; font-family:'Inter',sans-serif; text-decoration:none; transition:all .2s; white-space:nowrap; }
+    .btn-goto-chat:hover { background:rgba(0,200,150,.18); border-color:var(--green); transform:translateY(-1px); }
+
+    /* ── Pagination ── */
+    .pagination { display:flex; align-items:center; justify-content:space-between; padding:16px; border-top:1px solid var(--border); background:rgba(0,0,0,.1); }
+    .pagination-info { font-size:13px; color:var(--text-secondary); }
+    .pagination-btns { display:flex; gap:4px; align-items:center; }
+    .pg-btn { padding:6px 12px; border-radius:8px; border:1px solid var(--border); background:rgba(255,255,255,.05); color:var(--text-primary); font-size:13px; font-weight:600; cursor:pointer; font-family:'Inter',sans-serif; transition:all .2s; }
+    .pg-btn:hover:not(:disabled) { background:rgba(255,255,255,.12); }
+    .pg-btn:disabled { opacity:.35; cursor:not-allowed; }
+    .pg-btn.active { background:linear-gradient(135deg,#00c896,#00a87a); border-color:transparent; color:white; }
+    .pg-dots { padding:6px 4px; color:var(--text-secondary); }
   </style>
 </head>
 <body>
-  <div class="admin-container">
-    <button class="back-btn" onclick="location.href='dashboard.html'">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <line x1="19" y1="12" x2="5" y2="12" />
-        <polyline points="12 19 5 12 12 5" />
-      </svg>
-      Voltar ao Dashboard
-    </button>
+<div class="page-container">
 
-    <div class="admin-header">
-      <h2>Relatórios SLA (Tempo de Atendimento)</h2>
-    </div>
-
-    <div class="filters-section">
-      <div class="form-group">
-        <label>Data Início</label>
-        <input type="date" id="filterStart">
-      </div>
-      <div class="form-group">
-        <label>Data Fim</label>
-        <input type="date" id="filterEnd">
-      </div>
-      <button class="btn-primary" onclick="loadReports()">Filtrar</button>
-    </div>
-
-    <div style="overflow-x: auto;">
-      <table>
-        <thead>
-          <tr>
-            <th>Data</th>
-            <th>Cliente</th>
-            <th>Filial/Setor</th>
-            <th>Atendente</th>
-            <th>Espera na Fila</th>
-            <th>1ª Resposta</th>
-            <th>Média Contínua</th>
-          </tr>
-        </thead>
-        <tbody id="reportsBody">
-          <tr>
-            <td colspan="7" style="text-align: center; color: var(--text-muted);">Carregando relatórios...</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+  <button class="back-btn" onclick="location.href='dashboard.html'">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+    Voltar ao Dashboard
+  </button>
+  <div class="page-title">
+    <h1>📊 Relatórios</h1>
+    <span>Motivos de Finalização e Eficiência de tempo de atendimento</span>
   </div>
 
-  <script>
-    const API_URL = window.location.origin;
+  <div class="filters-bar">
+    <div class="form-group"><label>Data Início</label><input type="date" id="filterStart" /></div>
+    <div class="form-group"><label>Data Fim</label><input type="date" id="filterEnd" /></div>
+    <button class="btn-filter" onclick="loadAll()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:middle;margin-right:6px"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      Filtrar
+    </button>
+  </div>
 
-    window.onload = () => {
-      const token = localStorage.getItem('wp_crm_token');
-      if (!token) window.location.href = 'index.html';
-      
-      const today = new Date().toISOString().split('T')[0];
-      document.getElementById('filterStart').value = today;
-      document.getElementById('filterEnd').value = today;
-      
-      loadReports();
-    };
+  <div class="main-tabs">
+    <button class="main-tab-btn nps active" id="main-tab-nps" onclick="switchMain('nps')">📋 Motivos de Finalização</button>
+    <button class="main-tab-btn tempo" id="main-tab-tempo" onclick="switchMain('tempo')">⏱️ Tempo de Espera</button>
+  </div>
 
-    function formatTime(seconds) {
-      if (seconds === null || seconds === undefined) return '-';
-      const m = Math.floor(seconds / 60);
-      const s = Math.floor(seconds % 60);
-      return `${m}m ${s}s`;
-    }
+  <!-- MOTIVOS -->
+  <div class="main-tab-content active" id="main-content-nps">
+    <div class="sub-tabs">
+      <button class="sub-tab-btn active-nps" id="nps-sub-geral" onclick="switchSub('nps','geral')">📊 Gráfico Geral</button>
+      <button class="sub-tab-btn" id="nps-sub-atendentes" onclick="switchSub('nps','atendentes')">🧑‍💼 Ranking Atendentes</button>
+      <button class="sub-tab-btn" id="nps-sub-individuais" onclick="switchSubIndividuais()">💬 Chats Individual</button>
+    </div>
+    <div class="sub-tab-content active" id="nps-content-geral"><div id="nps-geral-box"><div class="spinner nps-spin"></div></div></div>
+    <div class="sub-tab-content" id="nps-content-atendentes"><div id="nps-atendentes-box"><div class="spinner nps-spin"></div></div></div>
+    <div class="sub-tab-content" id="nps-content-individuais"><div id="nps-individuais-box"><div class="spinner nps-spin"></div></div></div>
+  </div>
 
-    async function loadReports() {
-      const start = document.getElementById('filterStart').value;
-      const end = document.getElementById('filterEnd').value;
-      const tbody = document.getElementById('reportsBody');
-      
-      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted)">Carregando...</td></tr>';
-      
-      try {
-        let url = `${API_URL}/api/reports/sla`;
-        const params = new URLSearchParams();
-        if (start) params.append('start_date', start);
-        if (end) params.append('end_date', end);
-        if (params.toString()) url += `?${params.toString()}`;
+  <!-- TEMPO -->
+  <div class="main-tab-content" id="main-content-tempo">
+    <div class="sub-tabs">
+      <button class="sub-tab-btn active-tempo" id="tempo-sub-filiais" onclick="switchSub('tempo','filiais')">🏢 Por Filial / Setor</button>
+      <button class="sub-tab-btn" id="tempo-sub-atendentes" onclick="switchSub('tempo','atendentes')">🧑‍💼 Ranking Atendentes</button>
+    </div>
+    <div class="sub-tab-content active" id="tempo-content-filiais"><div id="tempo-filiais-box"><div class="spinner tempo-spin"></div></div></div>
+    <div class="sub-tab-content" id="tempo-content-atendentes"><div id="tempo-atendentes-box"><div class="spinner tempo-spin"></div></div></div>
+  </div>
 
-        const response = await fetch(url, {
-          headers: { 'Authorization': `Bearer ${localStorage.getItem('wp_crm_token')}` }
-        });
-        
-        const res = await response.json();
-        
-        if (!response.ok) {
-          tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#e74c3c">${res.error || 'Erro'}</td></tr>`;
-          return;
+</div>
+<script>
+  const API = window.location.origin;
+  const tok = () => localStorage.getItem('wp_crm_token');
+  let pizzaChart = null;
+  let currentPage = 1;
+  const perPage = 50;
+
+  window.onload = () => {
+    if (!tok()) { location.href = 'index.html'; return; }
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('filterStart').value = `${new Date().getFullYear()}-01-01`;
+    document.getElementById('filterEnd').value   = today;
+    loadAll();
+  };
+
+  function switchMain(t) {
+    document.querySelectorAll('.main-tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.main-tab-content').forEach(c => c.classList.remove('active'));
+    document.getElementById('main-tab-'+t).classList.add('active');
+    document.getElementById('main-content-'+t).classList.add('active');
+  }
+  function switchSub(sec, sub) {
+    const ac = 'active-'+sec;
+    document.querySelectorAll('[id^="'+sec+'-sub-"]').forEach(b => b.classList.remove(ac));
+    document.querySelectorAll('[id^="'+sec+'-content-"]').forEach(c => c.classList.remove('active'));
+    document.getElementById(sec+'-sub-'+sub).classList.add(ac);
+    document.getElementById(sec+'-content-'+sub).classList.add('active');
+  }
+  function switchSubIndividuais() {
+    switchSub('nps', 'individuais');
+    currentPage = 1;
+    loadMotivosIndividuais();
+  }
+  function tog(id) { document.getElementById(id).classList.toggle('open'); }
+
+  function qp(extra) {
+    const s = document.getElementById('filterStart').value, e = document.getElementById('filterEnd').value;
+    const p = new URLSearchParams();
+    if (s) p.append('start_date',s); if (e) p.append('end_date',e);
+    if (extra) Object.entries(extra).forEach(([k,v]) => p.append(k,v));
+    return p.toString() ? '?'+p.toString() : '';
+  }
+
+  function loadAll() {
+    currentPage = 1;
+    loadMotivosGeral();
+    loadNpsA();
+    loadTeF();
+    loadTeA();
+    // reload individual se estiver visível
+    const indivVisible = document.getElementById('nps-content-individuais').classList.contains('active');
+    if (indivVisible) loadMotivosIndividuais();
+  }
+
+  /* ── Helpers ── */
+  function fmtS(s) { if(!s||s<=0) return '—'; s=Math.round(s); const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sc=s%60; if(h>0)return h+'h '+m+'m'; if(m>0)return m+'m '+sc+'s'; return sc+'s'; }
+  function spC(s) { if(!s||s<=0)return''; if(s<120)return'fast'; if(s<600)return'medium'; return'slow'; }
+  function scC(s,a) { const mx=Math.max(...a),p=mx>0?s/mx:0; if(p>=.75)return'top'; if(p>=.5)return'mid'; if(p>=.25)return'low'; return'bot'; }
+  function bp(v,t) { return t>0?Math.round((v/t)*100):0; }
+  function chv() { return'<svg class="chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>'; }
+  function errH(m) { return'<div class="empty-state"><div class="empty-icon">⚠️</div><p>'+m+'</p></div>'; }
+  function empH(m) { return'<div class="empty-state"><div class="empty-icon">📭</div><p>'+m+'</p></div>'; }
+  const medals = ['🥇','🥈','🥉'];
+  function pilMotivo(m) {
+    if(m==='Venda') return '<span class="pill venda">💰 Venda</span>';
+    if(m==='Orçamento') return '<span class="pill orc">📝 Orçamento</span>';
+    return '<span class="pill outro">❓ Outro</span>';
+  }
+
+  /* ══ GRÁFICO GERAL ══ */
+  async function loadMotivosGeral() {
+    const el = document.getElementById('nps-geral-box');
+    el.innerHTML = '<div class="spinner nps-spin"></div>';
+    try {
+      const r = await fetch(API+'/api/reports/motivos-geral'+qp(), {headers:{Authorization:'Bearer '+tok()}});
+      const j = await r.json();
+      if(!r.ok||!j.success){el.innerHTML=errH(j.error||'Erro');return;}
+      const d = j.data;
+      const total = d.total || 0;
+
+      if(total === 0){el.innerHTML=empH('Nenhum atendimento finalizado no período.');return;}
+
+      el.innerHTML = `
+        <div class="chart-wrapper">
+          <div class="chart-canvas-wrap"><canvas id="pizzaChart"></canvas></div>
+          <div class="chart-legend">
+            <div class="legend-item">
+              <div class="legend-dot" style="background:#00c896"></div>
+              <div class="legend-info">
+                <span class="legend-label">💰 Vendas</span>
+                <span class="legend-count" style="color:#00c896">${d.vendas}</span>
+                <span class="legend-pct">${bp(d.vendas,total)}% do total</span>
+              </div>
+            </div>
+            <div class="legend-item">
+              <div class="legend-dot" style="background:#f5a623"></div>
+              <div class="legend-info">
+                <span class="legend-label">📝 Orçamentos</span>
+                <span class="legend-count" style="color:#f5a623">${d.orcamentos}</span>
+                <span class="legend-pct">${bp(d.orcamentos,total)}% do total</span>
+              </div>
+            </div>
+            <div class="legend-item">
+              <div class="legend-dot" style="background:#9b59b6"></div>
+              <div class="legend-info">
+                <span class="legend-label">❓ Outros</span>
+                <span class="legend-count" style="color:#9b59b6">${d.outros}</span>
+                <span class="legend-pct">${bp(d.outros,total)}% do total</span>
+              </div>
+            </div>
+            <div class="chart-total-box">
+              <span class="chart-total-label">Total de atendimentos finalizados</span>
+              <span class="chart-total-count">${total}</span>
+            </div>
+          </div>
+        </div>`;
+
+      if(pizzaChart) pizzaChart.destroy();
+      const ctx = document.getElementById('pizzaChart').getContext('2d');
+      pizzaChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: ['Vendas', 'Orçamentos', 'Outros'],
+          datasets: [{
+            data: [d.vendas, d.orcamentos, d.outros],
+            backgroundColor: ['#00c896', '#f5a623', '#9b59b6'],
+            borderColor: ['rgba(0,200,150,.5)','rgba(245,166,35,.5)','rgba(155,89,182,.5)'],
+            borderWidth: 2,
+            hoverOffset: 10
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '65%',
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: ctx => ` ${ctx.label}: ${ctx.raw} (${bp(ctx.raw, total)}%)`
+              }
+            }
+          },
+          animation: { animateRotate: true, duration: 800 }
         }
+      });
+    } catch(e){el.innerHTML=errH('Erro de conexão.');}
+  }
 
-        const data = res.data || [];
-        if (data.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted)">Nenhum registro encontrado.</td></tr>';
-          return;
-        }
+  /* ══ MOTIVOS ATENDENTES ══ */
+  async function loadNpsA() {
+    const el = document.getElementById('nps-atendentes-box');
+    el.innerHTML = '<div class="spinner nps-spin"></div>';
+    try {
+      const r = await fetch(API+'/api/reports/motivos-atendentes'+qp(), {headers:{Authorization:'Bearer '+tok()}});
+      const j = await r.json();
+      if(!r.ok||!j.success){el.innerHTML=errH(j.error||'Erro');return;}
+      const d = j.data||[];
+      if(!d.length){el.innerHTML=empH('Nenhum dado encontrado.');return;}
+      el.innerHTML='<div class="ranking-table-wrap"><table class="rtable"><thead><tr>'
+        +'<th>Posição</th><th>Atendente</th><th>Filial</th><th>Vendas</th><th>Orçamentos</th><th>Outros</th><th>Total Atendimentos</th>'
+        +'</tr></thead><tbody>'+d.map((r,i)=>'<tr>'
+          +'<td><div class="rank-pos"><span class="medal">'+(medals[i]||'')+'</span><span>#'+(i+1)+'</span></div></td>'
+          +'<td><div class="att-info"><span class="att-name">'+r.atendente+'</span><span class="att-sub">'+r.setor+'</span></div></td>'
+          +'<td style="color:var(--text-secondary)">'+r.filial+'</td>'
+          +'<td><span class="pill prom" style="font-size:14px;font-weight:bold">💰 '+r.vendas+'</span></td>'
+          +'<td><span class="pill neut">📝 '+r.orcamentos+'</span></td>'
+          +'<td><span class="pill detr">❓ '+r.outros+'</span></td>'
+          +'<td style="font-weight:700">'+r.total+'</td></tr>').join('')
+        +'</tbody></table></div>';
+    } catch(e){el.innerHTML=errH('Erro de conexão.');}
+  }
 
-        tbody.innerHTML = data.map(item => `
-          <tr>
-            <td>${new Date(item.criado_em).toLocaleString('pt-BR')}</td>
-            <td>${item.numero}</td>
-            <td>${item.filial || '-'} / ${item.setor || '-'}</td>
-            <td>${item.atendente || 'Não assumido'}</td>
-            <td><span class="time-badge">${formatTime(item.tempo_na_fila_segundos)}</span></td>
-            <td><span class="time-badge">${formatTime(item.tempo_primeira_resposta_segundos)}</span></td>
-            <td><span class="time-badge" title="${item.qtd_respostas_atendente} respostas analisadas">${formatTime(item.media_tempo_resposta_segundos)}</span></td>
-          </tr>
-        `).join('');
+  /* ══ CHATS INDIVIDUAIS ══ */
+  async function loadMotivosIndividuais(page) {
+    if(page) currentPage = page;
+    const el = document.getElementById('nps-individuais-box');
+    el.innerHTML = '<div class="spinner nps-spin"></div>';
+    try {
+      const r = await fetch(API+'/api/reports/motivos-individuais'+qp({page:currentPage,per_page:perPage}), {headers:{Authorization:'Bearer '+tok()}});
+      const j = await r.json();
+      if(!r.ok||!j.success){el.innerHTML=errH(j.error||'Erro');return;}
+      const d = j.data||[];
+      const pg = j.pagination||{total:0,page:1,total_pages:1};
+      if(!d.length){el.innerHTML=empH('Nenhum chat finalizado no período.');return;}
 
-      } catch (err) {
-        console.error(err);
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#e74c3c">Erro ao carregar dados.</td></tr>';
-      }
+      const rows = d.map(item => {
+        const det = item.detalhes ? `<div class="indiv-detalhes" title="${item.detalhes.replace(/"/g,'&quot;')}">${item.detalhes}</div>` : '<span style="color:var(--text-secondary);font-size:12px">—</span>';
+        return '<tr>'
+          +'<td><div class="att-info"><span class="att-name">'+item.atendente+'</span><span class="att-sub">'+item.criado_em+'</span></div></td>'
+          +'<td style="font-weight:500;font-size:13px">'+item.numero_cliente+'</td>'
+          +'<td>'+pilMotivo(item.motivo)+'</td>'
+          +'<td>'+det+'</td>'
+          +'<td><a class="btn-goto-chat" href="dashboard.html?chat='+encodeURIComponent(item.contact_id)+'">💬 Ir ao Chat</a></td>'
+          +'</tr>';
+      }).join('');
+
+      const paginationHtml = buildPagination(pg.total, pg.page, pg.total_pages, pg.per_page);
+
+      el.innerHTML = '<div class="ranking-table-wrap">'
+        +'<table class="rtable"><thead><tr>'
+        +'<th>Atendente</th><th>Número</th><th>Motivo</th><th>Detalhes</th><th>Ação</th>'
+        +'</tr></thead><tbody>'+rows+'</tbody></table>'
+        + paginationHtml
+        +'</div>';
+    } catch(e){el.innerHTML=errH('Erro de conexão.');}
+  }
+
+  function buildPagination(total, page, totalPages, perPage) {
+    const start = (page-1)*perPage+1;
+    const end = Math.min(page*perPage, total);
+    let btns = '';
+    // prev
+    btns += `<button class="pg-btn" onclick="loadMotivosIndividuais(${page-1})" ${page<=1?'disabled':''}>‹ Anterior</button>`;
+    // page numbers
+    const pages = [];
+    if(totalPages <= 7) {
+      for(let i=1;i<=totalPages;i++) pages.push(i);
+    } else {
+      pages.push(1);
+      if(page > 3) pages.push('...');
+      for(let i=Math.max(2,page-1);i<=Math.min(totalPages-1,page+1);i++) pages.push(i);
+      if(page < totalPages-2) pages.push('...');
+      pages.push(totalPages);
     }
-  </script>
+    pages.forEach(p => {
+      if(p==='...') btns += '<span class="pg-dots">…</span>';
+      else btns += `<button class="pg-btn${p===page?' active':''}" onclick="loadMotivosIndividuais(${p})">${p}</button>`;
+    });
+    btns += `<button class="pg-btn" onclick="loadMotivosIndividuais(${page+1})" ${page>=totalPages?'disabled':''}>Próximo ›</button>`;
+    return `<div class="pagination"><span class="pagination-info">Mostrando ${start}–${end} de ${total} registros</span><div class="pagination-btns">${btns}</div></div>`;
+  }
+
+  /* ══ TEMPO FILIAIS ══ */
+  async function loadTeF() {
+    const el = document.getElementById('tempo-filiais-box');
+    el.innerHTML = '<div class="spinner tempo-spin"></div>';
+    try {
+      const r = await fetch(API+'/api/reports/tempo-espera-filiais'+qp(), {headers:{Authorization:'Bearer '+tok()}});
+      const j = await r.json();
+      if(!r.ok||!j.success){el.innerHTML=errH(j.error||'Erro');return;}
+      const d = j.data||[];
+      if(!d.length){el.innerHTML=empH('Nenhum registro encontrado.');return;}
+      const allSc = d.map(f=>f.score);
+      el.innerHTML = d.map((f,fi)=>{
+        const cls = scC(f.score,allSc);
+        const setSc = f.setores.map(s=>s.score);
+        const setoresHtml = f.setores.map(s=>{
+          const sc=scC(s.score,setSc);
+          return '<div class="setor-card"><div class="setor-card-header"><div><div class="setor-name">'+s.setor+'</div><div class="setor-meta">'+s.total_atendidos+' atendimento(s)</div></div>'
+            +'<div class="score-badge '+sc+'"><span class="sv">'+s.score+'</span><span class="sl">Score</span></div></div>'
+            +'<div class="tempo-row"><span class="tempo-label">⏳ Espera média</span><span class="tempo-value '+spC(s.avg_espera_seg)+'">'+fmtS(s.avg_espera_seg)+'</span></div>'
+            +'<div class="tempo-row"><span class="tempo-label">💬 Chat médio</span><span class="tempo-value '+spC(s.avg_chat_seg)+'">'+fmtS(s.avg_chat_seg)+'</span></div>'
+            +'<div class="tempo-row"><span class="tempo-label">⚡ Total médio</span><span class="tempo-value '+spC(s.avg_total_seg)+'">'+fmtS(s.avg_total_seg)+'</span></div>'
+            +'</div>';
+        }).join('');
+        return '<div class="filial-block" id="tf'+fi+'">'
+          +'<div class="filial-header" onclick="tog(\'tf'+fi+'\')">'
+          +'<div class="filial-header-left"><div class="filial-icon ti">🏢</div><div><div class="filial-name">'+f.filial+'</div><div class="filial-meta">'+f.setores.length+' setor(es) · '+f.total_atendidos+' atendimentos</div></div></div>'
+          +'<div class="filial-header-right">'
+          +'<div class="stat-inline"><div class="stat-val tempo-value '+spC(f.avg_espera_seg)+'">⏳ '+fmtS(f.avg_espera_seg)+'</div><div class="stat-lbl">Espera média</div></div>'
+          +'<div class="stat-inline"><div class="stat-val tempo-value '+spC(f.avg_chat_seg)+'">💬 '+fmtS(f.avg_chat_seg)+'</div><div class="stat-lbl">Chat médio</div></div>'
+          +'<div class="score-badge '+cls+'"><span class="sv">'+f.score+'</span><span class="sl">Score</span></div>'+chv()+'</div></div>'
+          +'<div class="filial-body"><div class="setores-grid">'+setoresHtml+'</div></div></div>';
+      }).join('');
+    } catch(e){el.innerHTML=errH('Erro de conexão.');}
+  }
+
+  /* ══ TEMPO ATENDENTES ══ */
+  async function loadTeA() {
+    const el = document.getElementById('tempo-atendentes-box');
+    el.innerHTML = '<div class="spinner tempo-spin"></div>';
+    try {
+      const r = await fetch(API+'/api/reports/tempo-espera-atendentes'+qp(), {headers:{Authorization:'Bearer '+tok()}});
+      const j = await r.json();
+      if(!r.ok||!j.success){el.innerHTML=errH(j.error||'Erro');return;}
+      const d = j.data||[];
+      if(!d.length){el.innerHTML=empH('Nenhum registro encontrado.');return;}
+      const allSc = d.map(r=>r.score);
+      el.innerHTML='<div class="ranking-table-wrap"><table class="rtable"><thead><tr>'
+        +'<th>Posição</th><th>Atendente</th><th>Filial</th><th>⏳ Espera Média</th><th>💬 Chat Médio</th><th>⚡ Total Médio</th><th>Atendimentos</th><th>Score</th>'
+        +'</tr></thead><tbody>'+d.map((r,i)=>'<tr>'
+          +'<td><div class="rank-pos"><span class="medal">'+(medals[i]||'')+'</span><span>#'+(i+1)+'</span></div></td>'
+          +'<td><div class="att-info"><span class="att-name">'+r.atendente+'</span><span class="att-sub">'+r.setor+'</span></div></td>'
+          +'<td style="color:var(--text-secondary)">'+r.filial+'</td>'
+          +'<td><span class="tempo-value '+spC(r.avg_espera_seg)+'">'+fmtS(r.avg_espera_seg)+'</span></td>'
+          +'<td><span class="tempo-value '+spC(r.avg_chat_seg)+'">'+fmtS(r.avg_chat_seg)+'</span></td>'
+          +'<td><span class="tempo-value '+spC(r.avg_total_seg)+'">'+fmtS(r.avg_total_seg)+'</span></td>'
+          +'<td style="font-weight:700">'+r.total_atendidos+'</td>'
+          +'<td><div class="score-badge '+scC(r.score,allSc)+'"><span class="sv">'+r.score+'</span><span class="sl">Score</span></div></td>'
+          +'</tr>').join('')
+        +'</tbody></table></div>';
+    } catch(e){el.innerHTML=errH('Erro de conexão.');}
+  }
+
+
+</script>
 </body>
 </html>
