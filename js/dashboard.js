@@ -81,9 +81,11 @@ window.onload = async () => {
   }
 
   // Para usuarios nao-admin, recarregar contatos periodicamente
-  // Para usuarios nao-admin, recarregar contatos periodicamente e forçar visão Entregas
+  // Forçar visão Entregas para todos como padrão inicial
+  setView('entregas');
+
+  // Para usuarios nao-admin, recarregar contatos periodicamente
   if (user.role !== 'admin') {
-    setView('entregas');
     setInterval(async () => {
       await loadContacts();
       renderTagFilter();
@@ -97,8 +99,6 @@ function renderUserProfile(user) {
   document.getElementById('userAvatar').title = user.name + ' (' + user.email + ')';
 
   if (user.role === 'admin') {
-    document.getElementById('navChats').style.display = 'flex';
-    document.getElementById('navSettings').style.display = 'flex';
     document.getElementById('navAdmin').style.display = 'flex';
     document.getElementById('navReports').style.display = 'flex';
     const btnNavAdminEntregadores = document.getElementById('navAdminEntregadores');
