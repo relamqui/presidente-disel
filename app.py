@@ -5491,25 +5491,6 @@ def report_volume_chats_atendentes():
         return jsonify({'success': False, 'error': str(e), 'trace': traceback.format_exc()}), 500
 
 
-@app.route('/')
-def index_page():
-    return send_from_directory(ROOT_DIR, 'index.html')
-
-@app.route('/<path:path>')
-def serve_frontend(path):
-    if path in ('index.html', 'dashboard.html', 'admin.html', 'reports.html', 'relatorio.html', 'ranking.html', 'entregador', 'entregador.html'):
-        return send_from_directory(ROOT_DIR, 'entregador.html') if path == 'entregador' else send_from_directory(ROOT_DIR, path)
-    if path.startswith('css/') or path.startswith('js/') or path.startswith('img/'):
-        return send_from_directory(ROOT_DIR, path)
-    if path == 'manifest.json':
-        return send_from_directory(ROOT_DIR, path, mimetype='application/manifest+json')
-    if path == 'sw.js':
-        return send_from_directory(ROOT_DIR, path, mimetype='application/javascript')
-    if path.lower().endswith(('.png', '.jpg', '.jpeg', '.svg', '.ico', '.webp')):
-        return send_from_directory(ROOT_DIR, path)
-    return jsonify({'error': 'Not found'}), 404
-
-
 # ----------------------
 
 if __name__ == '__main__':
