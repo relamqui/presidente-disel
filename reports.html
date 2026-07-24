@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>WP CRM — Relatórios</title>
-  <meta name="description" content="Painel de relatórios: Motivos de Finalização e Tempo de Espera por filial, setor e atendente." />
+  <title>WP CRM â€” RelatÃ³rios</title>
+  <meta name="description" content="Painel de relatÃ³rios: Motivos de FinalizaÃ§Ã£o e Tempo de Espera por filial, setor e atendente." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -53,7 +53,7 @@
     .sub-tab-content { display:none; }
     .sub-tab-content.active { display:block; }
 
-    /* ── Pizza chart area ── */
+    /* â”€â”€ Pizza chart area â”€â”€ */
     .chart-wrapper { display:flex; gap:40px; align-items:center; flex-wrap:wrap; padding:32px; background:var(--bg-card); border:1px solid var(--border); border-radius:16px; }
     .chart-canvas-wrap { width:280px; height:280px; flex-shrink:0; position:relative; }
     .chart-legend { display:flex; flex-direction:column; gap:20px; flex:1; min-width:200px; }
@@ -67,7 +67,7 @@
     .chart-total-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--text-secondary); }
     .chart-total-count { font-size:36px; font-weight:800; color:var(--text-primary); }
 
-    /* ── Filial blocks ── */
+    /* â”€â”€ Filial blocks â”€â”€ */
     .filial-block { background:var(--bg-card); border:1px solid var(--border); border-radius:14px; margin-bottom:16px; overflow:hidden; transition:box-shadow .2s; }
     .filial-block:hover { box-shadow:0 4px 24px rgba(0,0,0,.18); }
     .filial-header { display:flex; align-items:center; justify-content:space-between; padding:18px 22px; cursor:pointer; user-select:none; transition:background .2s; }
@@ -157,12 +157,12 @@
     .spinner.volume-spin::after{ border-top-color:var(--purple); }
     @keyframes spin { to { transform:rotate(360deg); } }
 
-    /* ── Individual chats table ── */
+    /* â”€â”€ Individual chats table â”€â”€ */
     .indiv-detalhes { font-size:12px; color:var(--text-secondary); max-width:220px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .btn-goto-chat { display:inline-flex; align-items:center; gap:6px; padding:6px 14px; border-radius:8px; border:1px solid rgba(0,200,150,.4); background:rgba(0,200,150,.08); color:var(--green); font-size:12px; font-weight:600; cursor:pointer; font-family:'Inter',sans-serif; text-decoration:none; transition:all .2s; white-space:nowrap; }
     .btn-goto-chat:hover { background:rgba(0,200,150,.18); border-color:var(--green); transform:translateY(-1px); }
 
-    /* ── Pagination ── */
+    /* â”€â”€ Pagination â”€â”€ */
     .pagination { display:flex; align-items:center; justify-content:space-between; padding:16px; border-top:1px solid var(--border); background:rgba(0,0,0,.1); }
     .pagination-info { font-size:13px; color:var(--text-secondary); }
     .pagination-btns { display:flex; gap:4px; align-items:center; }
@@ -181,12 +181,12 @@
     Voltar ao Dashboard
   </button>
   <div class="page-title">
-    <h1>📊 Relatórios</h1>
-    <span>Motivos de Finalização e Eficiência de tempo de atendimento</span>
+    <h1>ðŸ“Š RelatÃ³rios</h1>
+    <span>Motivos de FinalizaÃ§Ã£o e EficiÃªncia de tempo de atendimento</span>
   </div>
 
   <div class="filters-bar">
-    <div class="form-group"><label>Data Início</label><input type="date" id="filterStart" /></div>
+    <div class="form-group"><label>Data InÃ­cio</label><input type="date" id="filterStart" /></div>
     <div class="form-group"><label>Data Fim</label><input type="date" id="filterEnd" /></div>
     <button class="btn-filter" onclick="loadAll()">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:middle;margin-right:6px"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -195,27 +195,42 @@
   </div>
 
   <div class="main-tabs">
-    <button class="main-tab-btn nps active" id="main-tab-nps" onclick="switchMain('nps')">📋 Motivos de Finalização</button>
-    <button class="main-tab-btn tempo" id="main-tab-tempo" onclick="switchMain('tempo')">⏱️ Tempo de Espera</button>
+    <button class="main-tab-btn nps active" id="main-tab-nps" onclick="switchMain('nps')">ðŸ“‹ Motivos de FinalizaÃ§Ã£o</button>
+    <button class="main-tab-btn tempo" id="main-tab-tempo" onclick="switchMain('tempo')">â±ï¸ Tempo de Espera</button>
   </div>
 
-  <!-- MOTIVOS -->
+    <!-- MOTIVOS -->
   <div class="main-tab-content active" id="main-content-nps">
     <div class="sub-tabs">
-      <button class="sub-tab-btn active-nps" id="nps-sub-geral" onclick="switchSub('nps','geral')">📊 Gráfico Geral</button>
-      <button class="sub-tab-btn" id="nps-sub-atendentes" onclick="switchSub('nps','atendentes')">🧑‍💼 Ranking Atendentes</button>
-      <button class="sub-tab-btn" id="nps-sub-individuais" onclick="switchSubIndividuais()">💬 Chats Individual</button>
+      <button class="sub-tab-btn active-nps" id="nps-sub-rotas" onclick="switchSub('nps','rotas')">🚚 Histórico de Rotas</button>
+      <button class="sub-tab-btn" id="nps-sub-individuais" onclick="switchSub('nps','individuais')">📋 Entregas Individuais</button>
+      <button class="sub-tab-btn" id="nps-sub-metricas" onclick="switchSub('nps','metricas')">⏱️ Métricas dos Entregadores</button>
     </div>
-    <div class="sub-tab-content active" id="nps-content-geral"><div id="nps-geral-box"><div class="spinner nps-spin"></div></div></div>
-    <div class="sub-tab-content" id="nps-content-atendentes"><div id="nps-atendentes-box"><div class="spinner nps-spin"></div></div></div>
-    <div class="sub-tab-content" id="nps-content-individuais"><div id="nps-individuais-box"><div class="spinner nps-spin"></div></div></div>
+
+    <div class="sub-content active" id="nps-content-rotas">
+      <div class="chart-card fade-in" id="rotas-box" style="min-height:300px">
+        <div class="spinner nps-spin"></div>
+      </div>
+    </div>
+    
+    <div class="sub-content" id="nps-content-individuais">
+      <div class="chart-card fade-in" id="individuais-box" style="min-height:300px">
+        <div class="spinner nps-spin"></div>
+      </div>
+    </div>
+    
+    <div class="sub-content" id="nps-content-metricas">
+      <div class="chart-card fade-in" id="metricas-box" style="min-height:300px">
+        <div class="spinner nps-spin"></div>
+      </div>
+    </div>
   </div>
 
-  <!-- TEMPO -->
+<!-- TEMPO -->
   <div class="main-tab-content" id="main-content-tempo">
     <div class="sub-tabs">
-      <button class="sub-tab-btn active-tempo" id="tempo-sub-filiais" onclick="switchSub('tempo','filiais')">🏢 Por Filial / Setor</button>
-      <button class="sub-tab-btn" id="tempo-sub-atendentes" onclick="switchSub('tempo','atendentes')">🧑‍💼 Ranking Atendentes</button>
+      <button class="sub-tab-btn active-tempo" id="tempo-sub-filiais" onclick="switchSub('tempo','filiais')">ðŸ¢ Por Filial / Setor</button>
+      <button class="sub-tab-btn" id="tempo-sub-atendentes" onclick="switchSub('tempo','atendentes')">ðŸ§‘â€ðŸ’¼ Ranking Atendentes</button>
     </div>
     <div class="sub-tab-content active" id="tempo-content-filiais"><div id="tempo-filiais-box"><div class="spinner tempo-spin"></div></div></div>
     <div class="sub-tab-content" id="tempo-content-atendentes"><div id="tempo-atendentes-box"><div class="spinner tempo-spin"></div></div></div>
@@ -250,7 +265,7 @@
     document.getElementById(sec+'-sub-'+sub).classList.add(ac);
     document.getElementById(sec+'-content-'+sub).classList.add('active');
   }
-  function switchSubIndividuais() {
+  function switchSub('nps','individuais') {
     switchSub('nps', 'individuais');
     currentPage = 1;
     loadMotivosIndividuais();
@@ -271,27 +286,27 @@
     loadNpsA();
     loadTeF();
     loadTeA();
-    // reload individual se estiver visível
+    // reload individual se estiver visÃ­vel
     const indivVisible = document.getElementById('nps-content-individuais').classList.contains('active');
     if (indivVisible) loadMotivosIndividuais();
   }
 
-  /* ── Helpers ── */
-  function fmtS(s) { if(!s||s<=0) return '—'; s=Math.round(s); const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sc=s%60; if(h>0)return h+'h '+m+'m'; if(m>0)return m+'m '+sc+'s'; return sc+'s'; }
+  /* â”€â”€ Helpers â”€â”€ */
+  function fmtS(s) { if(!s||s<=0) return 'â€”'; s=Math.round(s); const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sc=s%60; if(h>0)return h+'h '+m+'m'; if(m>0)return m+'m '+sc+'s'; return sc+'s'; }
   function spC(s) { if(!s||s<=0)return''; if(s<120)return'fast'; if(s<600)return'medium'; return'slow'; }
   function scC(s,a) { const mx=Math.max(...a),p=mx>0?s/mx:0; if(p>=.75)return'top'; if(p>=.5)return'mid'; if(p>=.25)return'low'; return'bot'; }
   function bp(v,t) { return t>0?Math.round((v/t)*100):0; }
   function chv() { return'<svg class="chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>'; }
-  function errH(m) { return'<div class="empty-state"><div class="empty-icon">⚠️</div><p>'+m+'</p></div>'; }
-  function empH(m) { return'<div class="empty-state"><div class="empty-icon">📭</div><p>'+m+'</p></div>'; }
-  const medals = ['🥇','🥈','🥉'];
+  function errH(m) { return'<div class="empty-state"><div class="empty-icon">âš ï¸</div><p>'+m+'</p></div>'; }
+  function empH(m) { return'<div class="empty-state"><div class="empty-icon">ðŸ“­</div><p>'+m+'</p></div>'; }
+  const medals = ['ðŸ¥‡','ðŸ¥ˆ','ðŸ¥‰'];
   function pilMotivo(m) {
-    if(m==='Venda') return '<span class="pill venda">💰 Venda</span>';
-    if(m==='Orçamento') return '<span class="pill orc">📝 Orçamento</span>';
-    return '<span class="pill outro">❓ Outro</span>';
+    if(m==='Venda') return '<span class="pill venda">ðŸ’° Venda</span>';
+    if(m==='OrÃ§amento') return '<span class="pill orc">ðŸ“ OrÃ§amento</span>';
+    return '<span class="pill outro">â“ Outro</span>';
   }
 
-  /* ══ GRÁFICO GERAL ══ */
+  /* â•â• GRÃFICO GERAL â•â• */
   async function loadMotivosGeral() {
     const el = document.getElementById('nps-geral-box');
     el.innerHTML = '<div class="spinner nps-spin"></div>';
@@ -302,7 +317,7 @@
       const d = j.data;
       const total = d.total || 0;
 
-      if(total === 0){el.innerHTML=empH('Nenhum atendimento finalizado no período.');return;}
+      if(total === 0){el.innerHTML=empH('Nenhum atendimento finalizado no perÃ­odo.');return;}
 
       el.innerHTML = `
         <div class="chart-wrapper">
@@ -311,7 +326,7 @@
             <div class="legend-item">
               <div class="legend-dot" style="background:#00c896"></div>
               <div class="legend-info">
-                <span class="legend-label">💰 Vendas</span>
+                <span class="legend-label">ðŸ’° Vendas</span>
                 <span class="legend-count" style="color:#00c896">${d.vendas}</span>
                 <span class="legend-pct">${bp(d.vendas,total)}% do total</span>
               </div>
@@ -319,7 +334,7 @@
             <div class="legend-item">
               <div class="legend-dot" style="background:#f5a623"></div>
               <div class="legend-info">
-                <span class="legend-label">📝 Orçamentos</span>
+                <span class="legend-label">ðŸ“ OrÃ§amentos</span>
                 <span class="legend-count" style="color:#f5a623">${d.orcamentos}</span>
                 <span class="legend-pct">${bp(d.orcamentos,total)}% do total</span>
               </div>
@@ -327,7 +342,7 @@
             <div class="legend-item">
               <div class="legend-dot" style="background:#9b59b6"></div>
               <div class="legend-info">
-                <span class="legend-label">❓ Outros</span>
+                <span class="legend-label">â“ Outros</span>
                 <span class="legend-count" style="color:#9b59b6">${d.outros}</span>
                 <span class="legend-pct">${bp(d.outros,total)}% do total</span>
               </div>
@@ -344,7 +359,7 @@
       pizzaChart = new Chart(ctx, {
         type: 'doughnut',
         data: {
-          labels: ['Vendas', 'Orçamentos', 'Outros'],
+          labels: ['Vendas', 'OrÃ§amentos', 'Outros'],
           datasets: [{
             data: [d.vendas, d.orcamentos, d.outros],
             backgroundColor: ['#00c896', '#f5a623', '#9b59b6'],
@@ -368,10 +383,10 @@
           animation: { animateRotate: true, duration: 800 }
         }
       });
-    } catch(e){el.innerHTML=errH('Erro de conexão.');}
+    } catch(e){el.innerHTML=errH('Erro de conexÃ£o.');}
   }
 
-  /* ══ MOTIVOS ATENDENTES ══ */
+  /* â•â• MOTIVOS ATENDENTES â•â• */
   async function loadNpsA() {
     const el = document.getElementById('nps-atendentes-box');
     el.innerHTML = '<div class="spinner nps-spin"></div>';
@@ -382,20 +397,20 @@
       const d = j.data||[];
       if(!d.length){el.innerHTML=empH('Nenhum dado encontrado.');return;}
       el.innerHTML='<div class="ranking-table-wrap"><table class="rtable"><thead><tr>'
-        +'<th>Posição</th><th>Atendente</th><th>Filial</th><th>Vendas</th><th>Orçamentos</th><th>Outros</th><th>Total Atendimentos</th>'
+        +'<th>PosiÃ§Ã£o</th><th>Atendente</th><th>Filial</th><th>Vendas</th><th>OrÃ§amentos</th><th>Outros</th><th>Total Atendimentos</th>'
         +'</tr></thead><tbody>'+d.map((r,i)=>'<tr>'
           +'<td><div class="rank-pos"><span class="medal">'+(medals[i]||'')+'</span><span>#'+(i+1)+'</span></div></td>'
           +'<td><div class="att-info"><span class="att-name">'+r.atendente+'</span><span class="att-sub">'+r.setor+'</span></div></td>'
           +'<td style="color:var(--text-secondary)">'+r.filial+'</td>'
-          +'<td><span class="pill prom" style="font-size:14px;font-weight:bold">💰 '+r.vendas+'</span></td>'
-          +'<td><span class="pill neut">📝 '+r.orcamentos+'</span></td>'
-          +'<td><span class="pill detr">❓ '+r.outros+'</span></td>'
+          +'<td><span class="pill prom" style="font-size:14px;font-weight:bold">ðŸ’° '+r.vendas+'</span></td>'
+          +'<td><span class="pill neut">ðŸ“ '+r.orcamentos+'</span></td>'
+          +'<td><span class="pill detr">â“ '+r.outros+'</span></td>'
           +'<td style="font-weight:700">'+r.total+'</td></tr>').join('')
         +'</tbody></table></div>';
-    } catch(e){el.innerHTML=errH('Erro de conexão.');}
+    } catch(e){el.innerHTML=errH('Erro de conexÃ£o.');}
   }
 
-  /* ══ CHATS INDIVIDUAIS ══ */
+  /* â•â• CHATS INDIVIDUAIS â•â• */
   async function loadMotivosIndividuais(page) {
     if(page) currentPage = page;
     const el = document.getElementById('nps-individuais-box');
@@ -406,16 +421,16 @@
       if(!r.ok||!j.success){el.innerHTML=errH(j.error||'Erro');return;}
       const d = j.data||[];
       const pg = j.pagination||{total:0,page:1,total_pages:1};
-      if(!d.length){el.innerHTML=empH('Nenhum chat finalizado no período.');return;}
+      if(!d.length){el.innerHTML=empH('Nenhum chat finalizado no perÃ­odo.');return;}
 
       const rows = d.map(item => {
-        const det = item.detalhes ? `<div class="indiv-detalhes" title="${item.detalhes.replace(/"/g,'&quot;')}">${item.detalhes}</div>` : '<span style="color:var(--text-secondary);font-size:12px">—</span>';
+        const det = item.detalhes ? `<div class="indiv-detalhes" title="${item.detalhes.replace(/"/g,'&quot;')}">${item.detalhes}</div>` : '<span style="color:var(--text-secondary);font-size:12px">â€”</span>';
         return '<tr>'
           +'<td><div class="att-info"><span class="att-name">'+item.atendente+'</span><span class="att-sub">'+item.criado_em+'</span></div></td>'
           +'<td style="font-weight:500;font-size:13px">'+item.numero_cliente+'</td>'
           +'<td>'+pilMotivo(item.motivo)+'</td>'
           +'<td>'+det+'</td>'
-          +'<td><a class="btn-goto-chat" href="dashboard.html?chat='+encodeURIComponent(item.contact_id)+'">💬 Ir ao Chat</a></td>'
+          +'<td><a class="btn-goto-chat" href="dashboard.html?chat='+encodeURIComponent(item.contact_id)+'">ðŸ’¬ Ir ao Chat</a></td>'
           +'</tr>';
       }).join('');
 
@@ -423,11 +438,11 @@
 
       el.innerHTML = '<div class="ranking-table-wrap">'
         +'<table class="rtable"><thead><tr>'
-        +'<th>Atendente</th><th>Número</th><th>Motivo</th><th>Detalhes</th><th>Ação</th>'
+        +'<th>Atendente</th><th>NÃºmero</th><th>Motivo</th><th>Detalhes</th><th>AÃ§Ã£o</th>'
         +'</tr></thead><tbody>'+rows+'</tbody></table>'
         + paginationHtml
         +'</div>';
-    } catch(e){el.innerHTML=errH('Erro de conexão.');}
+    } catch(e){el.innerHTML=errH('Erro de conexÃ£o.');}
   }
 
   function buildPagination(total, page, totalPages, perPage) {
@@ -435,7 +450,7 @@
     const end = Math.min(page*perPage, total);
     let btns = '';
     // prev
-    btns += `<button class="pg-btn" onclick="loadMotivosIndividuais(${page-1})" ${page<=1?'disabled':''}>‹ Anterior</button>`;
+    btns += `<button class="pg-btn" onclick="loadMotivosIndividuais(${page-1})" ${page<=1?'disabled':''}>â€¹ Anterior</button>`;
     // page numbers
     const pages = [];
     if(totalPages <= 7) {
@@ -448,14 +463,14 @@
       pages.push(totalPages);
     }
     pages.forEach(p => {
-      if(p==='...') btns += '<span class="pg-dots">…</span>';
+      if(p==='...') btns += '<span class="pg-dots">â€¦</span>';
       else btns += `<button class="pg-btn${p===page?' active':''}" onclick="loadMotivosIndividuais(${p})">${p}</button>`;
     });
-    btns += `<button class="pg-btn" onclick="loadMotivosIndividuais(${page+1})" ${page>=totalPages?'disabled':''}>Próximo ›</button>`;
-    return `<div class="pagination"><span class="pagination-info">Mostrando ${start}–${end} de ${total} registros</span><div class="pagination-btns">${btns}</div></div>`;
+    btns += `<button class="pg-btn" onclick="loadMotivosIndividuais(${page+1})" ${page>=totalPages?'disabled':''}>PrÃ³ximo â€º</button>`;
+    return `<div class="pagination"><span class="pagination-info">Mostrando ${start}â€“${end} de ${total} registros</span><div class="pagination-btns">${btns}</div></div>`;
   }
 
-  /* ══ TEMPO FILIAIS ══ */
+  /* â•â• TEMPO FILIAIS â•â• */
   async function loadTeF() {
     const el = document.getElementById('tempo-filiais-box');
     el.innerHTML = '<div class="spinner tempo-spin"></div>';
@@ -473,24 +488,24 @@
           const sc=scC(s.score,setSc);
           return '<div class="setor-card"><div class="setor-card-header"><div><div class="setor-name">'+s.setor+'</div><div class="setor-meta">'+s.total_atendidos+' atendimento(s)</div></div>'
             +'<div class="score-badge '+sc+'"><span class="sv">'+s.score+'</span><span class="sl">Score</span></div></div>'
-            +'<div class="tempo-row"><span class="tempo-label">⏳ Espera média</span><span class="tempo-value '+spC(s.avg_espera_seg)+'">'+fmtS(s.avg_espera_seg)+'</span></div>'
-            +'<div class="tempo-row"><span class="tempo-label">💬 Chat médio</span><span class="tempo-value '+spC(s.avg_chat_seg)+'">'+fmtS(s.avg_chat_seg)+'</span></div>'
-            +'<div class="tempo-row"><span class="tempo-label">⚡ Total médio</span><span class="tempo-value '+spC(s.avg_total_seg)+'">'+fmtS(s.avg_total_seg)+'</span></div>'
+            +'<div class="tempo-row"><span class="tempo-label">â³ Espera mÃ©dia</span><span class="tempo-value '+spC(s.avg_espera_seg)+'">'+fmtS(s.avg_espera_seg)+'</span></div>'
+            +'<div class="tempo-row"><span class="tempo-label">ðŸ’¬ Chat mÃ©dio</span><span class="tempo-value '+spC(s.avg_chat_seg)+'">'+fmtS(s.avg_chat_seg)+'</span></div>'
+            +'<div class="tempo-row"><span class="tempo-label">âš¡ Total mÃ©dio</span><span class="tempo-value '+spC(s.avg_total_seg)+'">'+fmtS(s.avg_total_seg)+'</span></div>'
             +'</div>';
         }).join('');
         return '<div class="filial-block" id="tf'+fi+'">'
           +'<div class="filial-header" onclick="tog(\'tf'+fi+'\')">'
-          +'<div class="filial-header-left"><div class="filial-icon ti">🏢</div><div><div class="filial-name">'+f.filial+'</div><div class="filial-meta">'+f.setores.length+' setor(es) · '+f.total_atendidos+' atendimentos</div></div></div>'
+          +'<div class="filial-header-left"><div class="filial-icon ti">ðŸ¢</div><div><div class="filial-name">'+f.filial+'</div><div class="filial-meta">'+f.setores.length+' setor(es) Â· '+f.total_atendidos+' atendimentos</div></div></div>'
           +'<div class="filial-header-right">'
-          +'<div class="stat-inline"><div class="stat-val tempo-value '+spC(f.avg_espera_seg)+'">⏳ '+fmtS(f.avg_espera_seg)+'</div><div class="stat-lbl">Espera média</div></div>'
-          +'<div class="stat-inline"><div class="stat-val tempo-value '+spC(f.avg_chat_seg)+'">💬 '+fmtS(f.avg_chat_seg)+'</div><div class="stat-lbl">Chat médio</div></div>'
+          +'<div class="stat-inline"><div class="stat-val tempo-value '+spC(f.avg_espera_seg)+'">â³ '+fmtS(f.avg_espera_seg)+'</div><div class="stat-lbl">Espera mÃ©dia</div></div>'
+          +'<div class="stat-inline"><div class="stat-val tempo-value '+spC(f.avg_chat_seg)+'">ðŸ’¬ '+fmtS(f.avg_chat_seg)+'</div><div class="stat-lbl">Chat mÃ©dio</div></div>'
           +'<div class="score-badge '+cls+'"><span class="sv">'+f.score+'</span><span class="sl">Score</span></div>'+chv()+'</div></div>'
           +'<div class="filial-body"><div class="setores-grid">'+setoresHtml+'</div></div></div>';
       }).join('');
-    } catch(e){el.innerHTML=errH('Erro de conexão.');}
+    } catch(e){el.innerHTML=errH('Erro de conexÃ£o.');}
   }
 
-  /* ══ TEMPO ATENDENTES ══ */
+  /* â•â• TEMPO ATENDENTES â•â• */
   async function loadTeA() {
     const el = document.getElementById('tempo-atendentes-box');
     el.innerHTML = '<div class="spinner tempo-spin"></div>';
@@ -502,7 +517,7 @@
       if(!d.length){el.innerHTML=empH('Nenhum registro encontrado.');return;}
       const allSc = d.map(r=>r.score);
       el.innerHTML='<div class="ranking-table-wrap"><table class="rtable"><thead><tr>'
-        +'<th>Posição</th><th>Atendente</th><th>Filial</th><th>⏳ Espera Média</th><th>💬 Chat Médio</th><th>⚡ Total Médio</th><th>Atendimentos</th><th>Score</th>'
+        +'<th>PosiÃ§Ã£o</th><th>Atendente</th><th>Filial</th><th>â³ Espera MÃ©dia</th><th>ðŸ’¬ Chat MÃ©dio</th><th>âš¡ Total MÃ©dio</th><th>Atendimentos</th><th>Score</th>'
         +'</tr></thead><tbody>'+d.map((r,i)=>'<tr>'
           +'<td><div class="rank-pos"><span class="medal">'+(medals[i]||'')+'</span><span>#'+(i+1)+'</span></div></td>'
           +'<td><div class="att-info"><span class="att-name">'+r.atendente+'</span><span class="att-sub">'+r.setor+'</span></div></td>'
@@ -514,7 +529,7 @@
           +'<td><div class="score-badge '+scC(r.score,allSc)+'"><span class="sv">'+r.score+'</span><span class="sl">Score</span></div></td>'
           +'</tr>').join('')
         +'</tbody></table></div>';
-    } catch(e){el.innerHTML=errH('Erro de conexão.');}
+    } catch(e){el.innerHTML=errH('Erro de conexÃ£o.');}
   }
 
 

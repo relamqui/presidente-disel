@@ -5549,6 +5549,195 @@ def report_volume_chats_atendentes():
 
 # ----------------------
 
+
+# --- NEW DELIVERY REPORTS ---
+@app.route('/api/reports/entregas/rotas', methods=['GET'])
+@auth_required
+@admin_or_gestor_required
+def report_entregas_rotas():
+    try:
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+        
+        query = Entrega.query.filter(
+            Entrega.entregador_id.isnot(None),
+            Entrega.numero_rota.isnot(None)
+        )
+        
+        if start_date:
+            dt = datetime.datetime.strptime(start_date, '%Y-%m-%d')
+            query = query.filter(Entrega.criado_em >= dt)
+        if end_date:
+            dt = datetime.datetime.strptime(end_date + ' 23:59:59', '%Y-%m-%d %H:%M:%S')
+            query = query.filter(Entrega.criado_em <= dt)
+            
+        entregas = query.order_by(Entrega.numero_rota.desc()).all()
+        users = {u.id: u.name for u in User.query.filter_by(role='entregador').all()}
+        
+        rotas_dict = {}
+        for e in entregas:
+            nr = e.numero_rota
+            if nr not in rotas_dict:
+                entregador_nome = users.get(e.entregador_id, f'Entregador #{e.entregador_id}')
+                rotas_dict[nr] = {
+                    'numero_rota': nr,
+                    'entregador_nome': entregador_nome,
+                    'saiu_para_entrega_em': e.saiu_para_entrega_em,
+                    'entregas': [],
+                    'finalizado_em': e.finalizado_em
+                }
+            # Add sub-deliveries
+            rotas_dict[nr]['entregas'].append({
+                'id': e.id,
+                'nome_peca': e.nome_peca,
+                'nome_cliente': e.nome_cliente,
+                'localizacao': e.localizacao,
+                'status': e.status,
+                'justificativa_falha': e.justificativa_falha
+            })
+            
+            if not rotas_dict[nr]['finalizado_em'] and e.finalizado_em:
+                rotas_dict[nr]['finalizado_em'] = e.finalizado_em
+                
+        resultado = list(rotas_dict.values())
+        return jsonify({'success': True, 'data': resultado}), 200
+    except Exception as e:
+        import traceback
+        return jsonify({'success': False, 'error': str(e), 'trace': traceback.format_exc()}), 500
+
+
+@app.route('/api/reports/entregas/individuais', methods=['GET'])
+@auth_required
+@admin_or_gestor_required
+def report_entregas_individuais():
+    try:
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+        
+        query = Entrega.query
+        
+        if start_date:
+            dt = datetime.datetime.strptime(start_date, '%Y-%m-%d')
+            query = query.filter(Entrega.criado_em >= dt)
+        if end_date:
+            dt = datetime.datetime.strptime(end_date + ' 23:59:59', '%Y-%m-%d %H:%M:%S')
+            query = query.filter(Entrega.criado_em <= dt)
+            
+        entregas = query.order_by(Entrega.criado_em.desc()).all()
+        users = {u.id: u.name for u in User.query.filter_by(role='entregador').all()}
+        
+        resultado = []
+        for e in entregas:
+            entregador_nome = users.get(e.entregador_id, '-') if e.entregador_id else '-'
+            resultado.append({
+                'id': e.id,
+                'nome_peca': e.nome_peca,
+                'nome_cliente': e.nome_cliente,
+                'localizacao': e.localizacao,
+                'entregador_nome': entregador_nome,
+                'status': e.status,
+                'numero_rota': e.numero_rota,
+                'criado_em': e.criado_em.strftime('%d/%m/%Y %H:%M:%S') if e.criado_em else '',
+                'justificativa_falha': e.justificativa_falha or ''
+            })
+            
+        return jsonify({'success': True, 'data': resultado}), 200
+    except Exception as e:
+        import traceback
+        return jsonify({'success': False, 'error': str(e), 'trace': traceback.format_exc()}), 500
+
+
+@app.route('/api/reports/entregas/metricas_entregador', methods=['GET'])
+@auth_required
+@admin_or_gestor_required
+def report_entregas_metricas_entregador():
+    try:
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+        
+        query = Entrega.query.filter(
+            Entrega.entregador_id.isnot(None),
+            Entrega.saiu_para_entrega_em.isnot(None)
+        )
+        
+        if start_date:
+            dt = datetime.datetime.strptime(start_date, '%Y-%m-%d')
+            query = query.filter(Entrega.criado_em >= dt)
+        if end_date:
+            dt = datetime.datetime.strptime(end_date + ' 23:59:59', '%Y-%m-%d %H:%M:%S')
+            query = query.filter(Entrega.criado_em <= dt)
+            
+        entregas = query.all()
+        users = {u.id: u.name for u in User.query.filter_by(role='entregador').all()}
+        
+        entregador_stats = {}
+        for e in entregas:
+            # Tempo para assumir: saiu_para_entrega_em - criado_em
+            # Tempo de entrega: finalizado_em - saiu_para_entrega_em
+            try:
+                criado = e.criado_em
+                saiu = datetime.datetime.strptime(e.saiu_para_entrega_em, '%d/%m/%Y %H:%M')
+                
+                tempo_assumir = (saiu - criado).total_seconds()
+                if tempo_assumir < 0: tempo_assumir = 0
+                
+                tempo_entrega = None
+                if e.finalizado_em:
+                    try:
+                        finalizado = datetime.datetime.strptime(e.finalizado_em, '%d/%m/%Y %H:%M')
+                        tempo_entrega = (finalizado - saiu).total_seconds()
+                        if tempo_entrega < 0: tempo_entrega = 0
+                    except:
+                        pass
+                
+                eid = e.entregador_id
+                if eid not in entregador_stats:
+                    entregador_stats[eid] = {
+                        'nome': users.get(eid, f'Entregador #{eid}'),
+                        'qtd_rotas_distintas': set(),
+                        'qtd_entregas': 0,
+                        'soma_assumir': 0,
+                        'count_assumir': 0,
+                        'soma_entrega': 0,
+                        'count_entrega': 0
+                    }
+                
+                stats = entregador_stats[eid]
+                stats['qtd_entregas'] += 1
+                if e.numero_rota:
+                    stats['qtd_rotas_distintas'].add(e.numero_rota)
+                
+                stats['soma_assumir'] += tempo_assumir
+                stats['count_assumir'] += 1
+                
+                if tempo_entrega is not None:
+                    stats['soma_entrega'] += tempo_entrega
+                    stats['count_entrega'] += 1
+            except Exception:
+                pass
+                
+        resultado = []
+        for eid, stats in entregador_stats.items():
+            avg_assumir = (stats['soma_assumir'] / stats['count_assumir']) if stats['count_assumir'] > 0 else 0
+            avg_entrega = (stats['soma_entrega'] / stats['count_entrega']) if stats['count_entrega'] > 0 else 0
+            
+            resultado.append({
+                'entregador_id': eid,
+                'entregador_nome': stats['nome'],
+                'qtd_entregas': stats['qtd_entregas'],
+                'qtd_rotas': len(stats['qtd_rotas_distintas']),
+                'avg_tempo_assumir': avg_assumir,
+                'avg_tempo_entrega': avg_entrega
+            })
+            
+        resultado.sort(key=lambda x: x['qtd_entregas'], reverse=True)
+        return jsonify({'success': True, 'data': resultado}), 200
+    except Exception as e:
+        import traceback
+        return jsonify({'success': False, 'error': str(e), 'trace': traceback.format_exc()}), 500
+
+# ----------------------
+
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 3008))
     print(f"Servidor Python rodando na porta {port}...")
