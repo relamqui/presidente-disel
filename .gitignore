@@ -47,3 +47,4 @@ iniciar_servidor.bat
 
 # Arquivos de sessão local do servidor
 instance/
+*.py\nvapid_keys.pem
