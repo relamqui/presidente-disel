@@ -615,6 +615,55 @@ def push_subscribe():
     db_sql.session.commit()
     return jsonify({'success': True})
 
+def send_push_to_entregadores(title, body):
+    from pywebpush import webpush, WebPushException
+    from urllib.parse import urlparse
+    import json
+    
+    # Obter todos os usuários entregadores
+    entregadores_ids = [u.id for u in User.query.filter_by(role='entregador').all()]
+    if not entregadores_ids:
+        return
+        
+    subs = PushSubscription.query.filter(PushSubscription.user_id.in_(entregadores_ids)).all()
+    if not subs:
+        return
+        
+    vapid_private_key = os.environ.get('VAPID_PRIVATE_KEY', 'BAMfTYg3RHaf4cFRuMZa9T1RvZFr7gsUDLBw6CqwzSU')
+    payload = json.dumps({
+        "title": title,
+        "body": body,
+        "url": "/entregador"
+    })
+    
+    vapid_claims = {
+        "sub": "mailto:contato@presidentedisel.com"
+    }
+    
+    for sub in subs:
+        sub_info = {
+            "endpoint": sub.endpoint,
+            "keys": {
+                "p256dh": sub.p256dh,
+                "auth": sub.auth
+            }
+        }
+        try:
+            webpush(
+                subscription_info=sub_info,
+                data=payload,
+                vapid_private_key=vapid_private_key,
+                vapid_claims=vapid_claims
+            )
+        except Exception as ex:
+            if hasattr(ex, 'response') and ex.response is not None:
+                if getattr(ex.response, 'status_code', 500) in [404, 410]:
+                    db_sql.session.delete(sub)
+    try:
+        db_sql.session.commit()
+    except:
+        db_sql.session.rollback()
+
 @app.route('/api/admin/push/test', methods=['POST'])
 @auth_required
 def push_test():
@@ -755,6 +804,16 @@ def create_entrega():
     )
     db_sql.session.add(nova_entrega)
     db_sql.session.commit()
+    
+    # Disparar notificação push para os entregadores de forma assíncrona/não bloqueante
+    try:
+        send_push_to_entregadores(
+            title="Nova Entrega Disponível!",
+            body=f"Temos uma nova entrega para {nova_entrega.nome_cliente}. Acesse para coletar!"
+        )
+    except Exception as e:
+        print("Erro ao enviar push de nova entrega:", e)
+        
     return jsonify({'success': True, 'id': nova_entrega.id, 'codigo': codigo})
 
 @app.route('/api/entregas/<int:id>/status', methods=['PUT'])
