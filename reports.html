@@ -303,6 +303,16 @@
     } catch(e) { return s; }
   };
 
+  const statusBadge = (status, falha) => {
+    let bg, color, icon;
+    if (status === 'Entregue') { bg='#0d2e1a'; color='#00c896'; icon='✅'; }
+    else if (status && status.toLowerCase().includes('falha')) { bg='#2e0d0d'; color='#ff6b6b'; icon='❌'; }
+    else if (status === 'Em rota') { bg='#0d1e2e'; color='#3498db'; icon='🚚'; }
+    else { bg='#1e1e2e'; color='#aaa'; icon='⏳'; }
+    return '<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;background:'+bg+';color:'+color+';border:1px solid '+color+'40;">'+icon+' '+status+'</span>'
+      +(falha ? '<div style="color:#ff6b6b;font-size:11px;margin-top:4px;padding:4px 8px;background:#2e0d0d;border-radius:6px;border-left:3px solid #ff6b6b;">'⚠️ Motivo: '+falha+'</div>' : '');
+  };
+
   async function loadRotas() {
     const el = document.getElementById('rotas-box');
     el.innerHTML = '<div class="spinner nps-spin"></div>';
@@ -313,19 +323,38 @@
       const d = j.data||[];
       if(!d.length){el.innerHTML=empH('Nenhuma rota encontrada no período.');return;}
       el.innerHTML = d.map(rota => {
-        const sub = rota.entregas.map(e => '<div style="padding:10px 15px; border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">'
-          +'<div><strong>'+e.nome_cliente+'</strong><div style="font-size:12px;color:var(--text-secondary);">'+e.localizacao+'</div></div>'
-          +'<div style="text-align:right;"><span style="font-size:12px; padding:3px 10px; border-radius:10px; background:var(--bg-base); font-weight:600;">'+e.status+'</span>'
-          +(e.justificativa_falha ? '<div style="color:#ff6b6b; font-size:11px; margin-top:4px;">Motivo: '+e.justificativa_falha+'</div>' : '')
-          +'</div></div>').join('');
-        return '<div style="margin-bottom:15px; background:var(--bg-panel); border:1px solid var(--border-color); border-radius:12px; overflow:hidden;">'
-          +'<div style="padding:15px; display:flex; justify-content:space-between; align-items:center; background:var(--bg-panel);">'
-          +'<div style="display:flex; align-items:center; gap:12px;">'
-          +'<div style="width:42px;height:42px;border-radius:10px;background:var(--primary);color:white;display:flex;align-items:center;justify-content:center;font-size:20px;">🚚</div>'
-          +'<div><div style="font-weight:700;font-size:16px;">Rota #'+rota.numero_rota+'</div><div style="color:var(--text-secondary);font-size:13px;">'+rota.entregador_nome+' • '+rota.entregas.length+' entregas</div></div></div>'
-          +'<div style="text-align:right;"><div style="font-size:12px;color:var(--text-secondary);">Saiu: '+fmtDt(rota.saiu_para_entrega_em)+'</div>'
-          +'<div style="font-size:12px;color:var(--text-secondary);">Fim: '+(rota.finalizado_em ? fmtDt(rota.finalizado_em) : '<span style="color:var(--primary)">Em andamento</span>')+'</div></div></div>'
-          +'<div style="background:var(--bg-base);">'+sub+'</div></div>';
+        const entregues = rota.entregas.filter(e => e.status === 'Entregue').length;
+        const falhas   = rota.entregas.filter(e => e.status && e.status.toLowerCase().includes('falha')).length;
+        const total    = rota.entregas.length;
+        const pct      = total > 0 ? Math.round((entregues/total)*100) : 0;
+        const barColor = pct === 100 ? '#00c896' : pct >= 50 ? '#f39c12' : '#ff6b6b';
+
+        const sub = rota.entregas.map((e,i) => '<div style="display:flex;align-items:center;gap:14px;padding:12px 18px;'+(i%2===0?'background:rgba(255,255,255,0.02);':'')+'border-bottom:1px solid rgba(255,255,255,0.05);">'
+          +'<div style="width:28px;height:28px;border-radius:50%;background:#1a1a2e;color:var(--text-secondary);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;">'+(i+1)+'</div>'
+          +'<div style="flex:1;"><div style="font-weight:600;font-size:13px;">'+e.nome_cliente+'</div><div style="font-size:11px;color:var(--text-secondary);margin-top:2px;">'+e.localizacao+'</div></div>'
+          +'<div style="text-align:right;">'+statusBadge(e.status, e.justificativa_falha)+'</div>'
+          +'</div>').join('');
+
+        return '<div style="margin-bottom:20px;border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,0.08);box-shadow:0 4px 20px rgba(0,0,0,0.3);">'
+          +'<div style="padding:18px 20px;background:linear-gradient(135deg,rgba(0,200,150,0.08),rgba(52,152,219,0.05));display:flex;justify-content:space-between;align-items:center;">'
+          +'<div style="display:flex;align-items:center;gap:14px;">'
+          +'<div style="width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,#00c896,#00a87a);color:white;display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 4px 12px rgba(0,200,150,0.3);">🚚</div>'
+          +'<div><div style="font-weight:800;font-size:17px;">Rota #'+rota.numero_rota+'</div>'
+          +'<div style="color:var(--text-secondary);font-size:13px;margin-top:2px;">'
+          +'<span style="color:#00c896;font-weight:600;">'+rota.entregador_nome+'</span> &nbsp;|&nbsp; '+total+' entrega'+(total!==1?'s':'')+'</div></div></div>'
+          +'<div style="text-align:right;">'
+          +'<div style="display:flex;gap:10px;margin-bottom:8px;">'
+          +'<span style="font-size:12px;padding:3px 10px;border-radius:20px;background:rgba(0,200,150,0.15);color:#00c896;font-weight:600;">✅ '+entregues+' entregue'+(entregues!==1?'s':'')+'</span>'
+          +(falhas>0?'<span style="font-size:12px;padding:3px 10px;border-radius:20px;background:rgba(255,107,107,0.15);color:#ff6b6b;font-weight:600;">❌ '+falhas+' falha'+(falhas!==1?'s':'')+'</span>':'')
+          +'</div>'
+          +'<div style="font-size:11px;color:var(--text-secondary);">'
+          +'🕐 '+fmtDt(rota.saiu_para_entrega_em)+' &rarr; '+(rota.finalizado_em ? fmtDt(rota.finalizado_em) : '<span style="color:#00c896">Em andamento</span>')
+          +'</div></div></div>'
+          +'<div style="background:#0a0a14;padding:6px 20px 2px;">'
+          +'<div style="display:flex;align-items:center;gap:10px;padding:8px 0;">'
+          +'<div style="flex:1;height:6px;border-radius:3px;background:rgba(255,255,255,0.06);"><div style="height:100%;border-radius:3px;background:'+barColor+';width:'+pct+'%;transition:width 1s ease;"></div></div>'
+          +'<span style="font-size:12px;font-weight:700;color:'+barColor+'">'+pct+'%</span></div></div>'
+          +'<div>'+sub+'</div></div>';
       }).join('');
     } catch(e){el.innerHTML=errH('Erro de conexão.');}
   }
@@ -339,17 +368,33 @@
       if(!r.ok||!j.success){el.innerHTML=errH(j.error||'Erro');return;}
       const d = j.data||[];
       if(!d.length){el.innerHTML=empH('Nenhuma entrega no período.');return;}
-      const rows = d.map(item => {
-        const falha = item.justificativa_falha ? '<div style="color:#ff6b6b;font-size:11px;margin-top:2px;">Motivo: '+item.justificativa_falha+'</div>' : '';
-        return '<tr>'
+
+      const total     = d.length;
+      const entregues = d.filter(e => e.status === 'Entregue').length;
+      const falhas    = d.filter(e => e.status && e.status.toLowerCase().includes('falha')).length;
+      const outros    = total - entregues - falhas;
+
+      const stats = '<div style="display:flex;gap:14px;margin-bottom:20px;flex-wrap:wrap;">'
+        +'<div style="flex:1;min-width:130px;padding:16px;border-radius:12px;background:rgba(52,152,219,0.1);border:1px solid rgba(52,152,219,0.2);">'
+        +'<div style="font-size:28px;font-weight:800;color:#3498db;">'+total+'</div><div style="font-size:12px;color:var(--text-secondary);">Total de Entregas</div></div>'
+        +'<div style="flex:1;min-width:130px;padding:16px;border-radius:12px;background:rgba(0,200,150,0.1);border:1px solid rgba(0,200,150,0.2);">'
+        +'<div style="font-size:28px;font-weight:800;color:#00c896;">'+entregues+'</div><div style="font-size:12px;color:var(--text-secondary);">Entregues</div></div>'
+        +'<div style="flex:1;min-width:130px;padding:16px;border-radius:12px;background:rgba(255,107,107,0.1);border:1px solid rgba(255,107,107,0.2);">'
+        +'<div style="font-size:28px;font-weight:800;color:#ff6b6b;">'+falhas+'</div><div style="font-size:12px;color:var(--text-secondary);">Falhas</div></div>'
+        +(outros>0?'<div style="flex:1;min-width:130px;padding:16px;border-radius:12px;background:rgba(243,156,18,0.1);border:1px solid rgba(243,156,18,0.2);">'
+        +'<div style="font-size:28px;font-weight:800;color:#f39c12;">'+outros+'</div><div style="font-size:12px;color:var(--text-secondary);">Em aberto</div></div>':'')
+        +'</div>';
+
+      const rows = d.map((item,i) => {
+        return '<tr style="'+(i%2===0?'background:rgba(255,255,255,0.01);':'')+'">' 
           +'<td><div class="att-info"><span class="att-name">'+item.nome_cliente+'</span><span class="att-sub">'+item.localizacao+'</span></div></td>'
-          +'<td>'+item.entregador_nome+'</td>'
-          +'<td>'+(item.numero_rota ? 'Rota #'+item.numero_rota : '-')+'</td>'
-          +'<td><span style="font-weight:600;font-size:12px;padding:2px 8px;border-radius:10px;background:var(--bg-base);">'+item.status+'</span>'+falha+'</td>'
-          +'<td>'+item.criado_em+'</td>'
+          +'<td><span style="font-weight:600;">'+item.entregador_nome+'</span></td>'
+          +'<td>'+(item.numero_rota ? '<span style="background:rgba(52,152,219,0.15);color:#3498db;padding:2px 8px;border-radius:10px;font-size:12px;font-weight:600;">Rota #'+item.numero_rota+'</span>' : '-')+'</td>'
+          +'<td>'+statusBadge(item.status, item.justificativa_falha)+'</td>'
+          +'<td style="color:var(--text-secondary);font-size:12px;">'+item.criado_em+'</td>'
           +'</tr>';
       }).join('');
-      el.innerHTML = '<div class="ranking-table-wrap"><table class="rtable"><thead><tr>'
+      el.innerHTML = stats+'<div class="ranking-table-wrap"><table class="rtable"><thead><tr>'
         +'<th>Cliente / Endereço</th><th>Entregador</th><th>Rota</th><th>Status</th><th>Criada em</th>'
         +'</tr></thead><tbody>'+rows+'</tbody></table></div>';
     } catch(e){el.innerHTML=errH('Erro de conexão.');}
@@ -365,20 +410,24 @@
       const d = j.data||[];
       if(!d.length){el.innerHTML=empH('Nenhum dado de entregador no período.');return;}
       const fmtMin = s => { if(!s) return '-'; const m=Math.floor(s/60),sc=Math.floor(s%60); return m+'m '+sc+'s'; };
-      const rows = d.map((item,i) => {
+      const cards = d.map((item,i) => {
         const meds = ['🥇','🥈','🥉'];
-        return '<tr>'
-          +'<td><div class="rank-pos"><span class="medal">'+(meds[i]||'')+'</span><span>#'+(i+1)+'</span></div></td>'
-          +'<td><span style="font-weight:600;">'+item.entregador_nome+'</span></td>'
-          +'<td>'+item.qtd_rotas+'</td>'
-          +'<td>'+item.qtd_entregas+'</td>'
-          +'<td style="color:var(--text-secondary);font-weight:500;">'+fmtMin(item.avg_tempo_assumir)+'</td>'
-          +'<td style="color:var(--primary);font-weight:500;">'+fmtMin(item.avg_tempo_entrega)+'</td>'
-          +'</tr>';
+        const podGrad = i===0?'linear-gradient(135deg,#f39c12,#e67e22)':i===1?'linear-gradient(135deg,#bdc3c7,#95a5a6)':i===2?'linear-gradient(135deg,#cd7f32,#a0522d)':'linear-gradient(135deg,#2c3e50,#1a252f)';
+        return '<div style="border-radius:16px;padding:20px;border:1px solid rgba(255,255,255,0.08);background:var(--bg-panel);margin-bottom:14px;display:flex;align-items:center;gap:18px;box-shadow:0 4px 20px rgba(0,0,0,0.2);">'
+          +'<div style="width:56px;height:56px;border-radius:50%;background:'+podGrad+';display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;box-shadow:0 4px 12px rgba(0,0,0,0.3);">'
+          +(i<3 ? meds[i] : '<span style="font-size:16px;font-weight:800;color:white;">#'+(i+1)+'</span>')+'</div>'
+          +'<div style="flex:1;"><div style="font-weight:700;font-size:16px;">'+item.entregador_nome+'</div>'
+          +'<div style="color:var(--text-secondary);font-size:13px;margin-top:2px;">'+item.qtd_rotas+' rotas &bull; '+item.qtd_entregas+' entregas</div></div>'
+          +'<div style="display:flex;gap:20px;text-align:center;">'
+          +'<div style="padding:12px 18px;border-radius:12px;background:rgba(243,156,18,0.1);border:1px solid rgba(243,156,18,0.2);">'
+          +'<div style="font-size:20px;font-weight:800;color:#f39c12;">'+fmtMin(item.avg_tempo_assumir)+'</div>'
+          +'<div style="font-size:11px;color:var(--text-secondary);margin-top:4px;">Tempo p/ Assumir</div></div>'
+          +'<div style="padding:12px 18px;border-radius:12px;background:rgba(0,200,150,0.1);border:1px solid rgba(0,200,150,0.2);">'
+          +'<div style="font-size:20px;font-weight:800;color:#00c896;">'+fmtMin(item.avg_tempo_entrega)+'</div>'
+          +'<div style="font-size:11px;color:var(--text-secondary);margin-top:4px;">Tempo de Entrega</div></div>'
+          +'</div></div>';
       }).join('');
-      el.innerHTML = '<div class="ranking-table-wrap"><table class="rtable"><thead><tr>'
-        +'<th>#</th><th>Entregador</th><th>Rotas</th><th>Entregas</th><th>Média p/ Iniciar</th><th>Média p/ Entregar</th>'
-        +'</tr></thead><tbody>'+rows+'</tbody></table></div>';
+      el.innerHTML = cards;
     } catch(e){el.innerHTML=errH('Erro de conexão.');}
   }
 
