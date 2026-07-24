@@ -563,21 +563,38 @@ function setView(view) {
 
 // ─── Lógica do Gestor de Entregas (Mapa & Histórico) ──────────────────────────
 
-function toggleMapVisibility() {
-  const mapContainer = document.getElementById('mapContainer');
-  const icon = document.getElementById('mapToggleIcon');
-  if (mapContainer.style.display === 'none') {
-    mapContainer.style.display = 'block';
-    icon.style.transform = 'rotate(180deg)';
-    if (globalDriverMap) {
-      setTimeout(() => globalDriverMap.invalidateSize(), 300);
-    } else {
-      setTimeout(initGlobalDriverMap, 300);
-    }
-  } else {
-    mapContainer.style.display = 'none';
-    icon.style.transform = 'rotate(0deg)';
+function openDrawer(id) {
+  closeAllDrawers(false);
+  const drawer = document.getElementById(id);
+  const overlay = document.getElementById('drawerOverlay');
+  if (!drawer) return;
+  overlay.style.display = 'block';
+  setTimeout(() => { drawer.style.right = '0'; }, 10);
+  // If opening the map drawer, init the map
+  if (id === 'drawerMapa') {
+    setTimeout(() => {
+      if (!globalDriverMap) {
+        initGlobalDriverMap();
+      } else {
+        globalDriverMap.invalidateSize();
+      }
+    }, 360);
   }
+}
+
+function closeAllDrawers(hideOverlay = true) {
+  ['drawerMapa', 'drawerRotas'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.right = '-520px';
+  });
+  if (hideOverlay) {
+    const overlay = document.getElementById('drawerOverlay');
+    if (overlay) overlay.style.display = 'none';
+  }
+}
+
+function toggleMapVisibility() {
+  openDrawer('drawerMapa');
 }
 
 async function loadRouteHistory() {
