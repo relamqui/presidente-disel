@@ -405,6 +405,12 @@ def migrate_to_sql():
             db_sql.session.commit()
         except Exception:
             db_sql.session.rollback()
+            
+        try:
+            db_sql.session.execute(db_sql.text('ALTER TABLE "entrega" ADD COLUMN numero_rota INTEGER'))
+            db_sql.session.commit()
+        except Exception:
+            db_sql.session.rollback()
         
         # Add assignment columns to contact
         try:
