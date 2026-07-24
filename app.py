@@ -1022,10 +1022,21 @@ def get_historico_rotas():
                     'finalizado_em': e.finalizado_em
                 }
             else:
-                # Verifica se pertence à mesma rota (diferença <= 30 minutos de saída)
+                # Verifica se pertence à mesma rota
+                # Condição 1: Diferença de saída maior que 30 minutos
                 diff_seconds = (dt_saiu - current_rota['dt_saiu']).total_seconds()
-                if diff_seconds > 30 * 60:
-                    # Diferença maior que 30 min, salva a rota atual e começa uma nova
+                
+                # Condição 2: A rota anterior já foi totalmente finalizada ANTES desta nova entrega sair
+                # Para saber se foi totalmente finalizada, todas as entregas devem ter status 'Entregue' ou 'Falha'
+                # E o finalizado_em máximo da rota deve ser MENOR que o saiu_para_entrega_em da nova entrega
+                todas_finalizadas = all(x['status'] in ('Entregue', 'Falha na Entrega') for x in current_rota['entregas'])
+                rota_finalizada_antes = False
+                if todas_finalizadas and current_rota['finalizado_em']:
+                    if e.saiu_para_entrega_em > current_rota['finalizado_em']:
+                        rota_finalizada_antes = True
+
+                if diff_seconds > 30 * 60 or rota_finalizada_antes:
+                    # Diferença maior que 30 min ou rota anterior já terminou, salva a atual e começa uma nova
                     historico.append(current_rota)
                     current_rota = {
                         'entregador_nome': entregador_nome,
