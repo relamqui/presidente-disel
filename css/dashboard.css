@@ -1346,6 +1346,7 @@ body {
   flex-direction: column;
   background: var(--bg-panel);
   height: 100%;
+  overflow-y: auto;
 }
 
 .btn-nova-entrega {
@@ -1369,9 +1370,6 @@ body {
 .tabela-entregas-container {
   padding: 24px;
   flex: 1;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: var(--border) transparent;
 }
 
 /* WPCRM Table Style */
