@@ -843,37 +843,108 @@ function renderEntregas(entregas) {
   const tbody = document.getElementById('listaEntregasBody');
   if (!tbody) return;
   tbody.innerHTML = '';
-  
+
   if (entregas.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:20px; color:#8696a0;">Nenhuma entrega encontrada.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="1" style="padding:40px; text-align:center; color:#8696a0; font-size:16px;">📭 Nenhuma entrega encontrada.</td></tr>`;
     return;
   }
 
-  entregas.forEach(e => { let statusColor = '#3b4a54'; if (e.status === 'Pronto para coleta') statusColor = '#00a884'; else if (e.status === 'Saiu para entrega') statusColor = '#f59e0b'; else if (e.status === 'Entregue') statusColor = '#3b82f6'; else if (e.status === 'Cancelado') statusColor = '#ef4444'; let statusBadge = `<span style="padding:4px 8px;border-radius:4px;font-size:11px;font-weight:600;background:${statusColor};color:white;">${escapeHtml(e.status)}</span>`;
+  const statusConfig = {
+    'Pronto para coleta': { bg: '#0d2e1a', color: '#00c896', border: '#00c896', icon: '📦' },
+    'Saiu para entrega':  { bg: '#1a1a0d', color: '#f59e0b', border: '#f59e0b', icon: '🚚' },
+    'Entregue':           { bg: '#0d1a2e', color: '#3b82f6', border: '#3b82f6', icon: '✅' },
+    'Falha na Entrega':   { bg: '#2e0d0d', color: '#ef4444', border: '#ef4444', icon: '❌' },
+    'Cancelado':          { bg: '#2e0d0d', color: '#ef4444', border: '#ef4444', icon: '🚫' },
+  };
 
-    let pagInfo = e.pago ? '<span class="tag-green" style="padding:4px 8px;border-radius:4px;font-size:11px;">Pago</span>' : `<span class="tag-orange" style="padding:4px 8px;border-radius:4px;font-size:11px;">A Pagar</span><div style="font-size:11px;margin-top:6px;color:var(--text-secondary)">${e.forma_pagamento || '-'} <br> R$ ${e.valor || '0.00'}</div>`;
-    
-    let locationHtml = escapeHtml(e.localizacao);
+  // Use a container div instead of table rows
+  tbody.closest('table').style.display = 'none';
+  let container = document.getElementById('entregasCardsContainer');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'entregasCardsContainer';
+    container.style.cssText = 'display:flex;flex-direction:column;gap:14px;padding:16px;';
+    tbody.closest('table').parentNode.insertBefore(container, tbody.closest('table'));
+  }
+  container.innerHTML = '';
+
+  entregas.forEach(e => {
+    const cfg = statusConfig[e.status] || { bg: '#1e1e2e', color: '#aaa', border: '#aaa', icon: '⏳' };
+
+    let mapsLink = '';
     if (e.latitude && e.longitude) {
-      locationHtml += `<br><a href="https://maps.google.com/?q=${e.latitude},${e.longitude}" target="_blank" style="color:var(--green);font-size:11px;text-decoration:none;display:inline-block;margin-top:4px;">📍 Abrir no Maps</a>`;
+      mapsLink = `<a href="https://maps.google.com/?q=${e.latitude},${e.longitude}" target="_blank"
+        style="display:inline-flex;align-items:center;gap:5px;color:#00c896;font-size:14px;font-weight:600;text-decoration:none;margin-top:6px;padding:6px 12px;background:rgba(0,200,150,0.1);border-radius:8px;border:1px solid rgba(0,200,150,0.3);">
+        📍 Ver no Mapa
+      </a>`;
     }
 
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>#${e.id}</td>
-      <td><strong>${escapeHtml(e.nome_cliente)}</strong></td>
-      <td>${escapeHtml(e.telefone_cliente || '-')}</td>
-      <td><strong>${escapeHtml(e.nome_peca)}</strong><br><span style="font-size:12px;color:var(--text-secondary);margin-top:4px;display:inline-block;">Tam: ${escapeHtml(e.tamanho_peca || '-')}</span></td>
-      <td>${locationHtml}</td>
-      <td>${pagInfo}</td>
-      <td style="font-size:13px; color:var(--text-secondary);">${escapeHtml(e.nome_atendente || '-')}</td>
-      <td style="font-family:monospace; font-size:14px; font-weight:bold; color:var(--text-primary);">${escapeHtml(e.codigo_verificacao || '-')}</td>
-      <td>${statusBadge}</td>
-      <td>
-        <button class="icon-btn" title="Editar (Em breve)" style="color:var(--green);"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg></button>
-      </td>
+    const falhaHtml = e.justificativa_falha
+      ? `<div style="margin-top:8px;padding:10px 14px;background:#2e0d0d;border-radius:8px;border-left:4px solid #ef4444;font-size:14px;color:#ef4444;">
+           ⚠️ <strong>Motivo da falha:</strong> ${escapeHtml(e.justificativa_falha)}
+         </div>`
+      : '';
+
+    const pagHtml = e.pago
+      ? `<span style="background:rgba(0,200,150,0.15);color:#00c896;border:1px solid rgba(0,200,150,0.3);padding:6px 14px;border-radius:20px;font-size:14px;font-weight:700;">✅ Pago</span>`
+      : `<span style="background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.3);padding:6px 14px;border-radius:20px;font-size:14px;font-weight:700;">💰 A Pagar ${e.forma_pagamento ? '— ' + e.forma_pagamento : ''} ${e.valor ? '— R$ ' + e.valor : ''}</span>`;
+
+    const card = document.createElement('div');
+    card.style.cssText = `
+      background: var(--bg-panel);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-left: 5px solid ${cfg.border};
+      border-radius: 14px;
+      padding: 20px 24px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+      transition: box-shadow 0.2s;
     `;
-    tbody.appendChild(tr);
+    card.onmouseenter = () => card.style.boxShadow = '0 6px 28px rgba(0,0,0,0.4)';
+    card.onmouseleave = () => card.style.boxShadow = '0 4px 20px rgba(0,0,0,0.25)';
+
+    card.innerHTML = `
+      <!-- Cabeçalho do card -->
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px; margin-bottom:14px;">
+        <div style="display:flex; align-items:center; gap:14px;">
+          <div style="width:50px;height:50px;border-radius:12px;background:${cfg.bg};border:2px solid ${cfg.border};display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;">${cfg.icon}</div>
+          <div>
+            <div style="font-size:20px; font-weight:800; color:var(--text-primary);">${escapeHtml(e.nome_cliente)}</div>
+            <div style="font-size:14px; color:var(--text-secondary); margin-top:2px;">📱 ${escapeHtml(e.telefone_cliente || '-')} &nbsp;|&nbsp; Pedido #${e.id}</div>
+          </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+          <span style="padding:8px 18px; border-radius:24px; font-size:15px; font-weight:800; background:${cfg.bg}; color:${cfg.color}; border:2px solid ${cfg.border}; letter-spacing:0.5px;">
+            ${cfg.icon} ${escapeHtml(e.status)}
+          </span>
+          <button onclick="openNovaEntregaModal(${e.id})" title="Editar" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:var(--text-secondary);border-radius:8px;padding:8px 12px;cursor:pointer;font-size:18px;">✏️</button>
+        </div>
+      </div>
+
+      <!-- Informações em grid -->
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:12px; margin-bottom:12px;">
+        <div style="background:var(--bg-base); border-radius:10px; padding:12px 16px;">
+          <div style="font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--text-secondary); margin-bottom:4px;">📦 Peça</div>
+          <div style="font-size:16px; font-weight:700;">${escapeHtml(e.nome_peca)}</div>
+          <div style="font-size:13px; color:var(--text-secondary);">Tamanho: ${escapeHtml(e.tamanho_peca || '-')}</div>
+        </div>
+        <div style="background:var(--bg-base); border-radius:10px; padding:12px 16px;">
+          <div style="font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--text-secondary); margin-bottom:4px;">📍 Endereço</div>
+          <div style="font-size:15px; font-weight:600; line-height:1.4;">${escapeHtml(e.localizacao)}</div>
+          ${mapsLink}
+        </div>
+        <div style="background:var(--bg-base); border-radius:10px; padding:12px 16px;">
+          <div style="font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--text-secondary); margin-bottom:8px;">💳 Pagamento</div>
+          ${pagHtml}
+        </div>
+        <div style="background:var(--bg-base); border-radius:10px; padding:12px 16px;">
+          <div style="font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--text-secondary); margin-bottom:4px;">👤 Atendente</div>
+          <div style="font-size:15px; font-weight:600;">${escapeHtml(e.nome_atendente || '-')}</div>
+          <div style="margin-top:6px;font-size:11px;color:var(--text-secondary);">Cód: <span style="font-family:monospace; font-size:16px; font-weight:800; color:var(--text-primary); letter-spacing:2px;">${escapeHtml(e.codigo_verificacao || '-')}</span></div>
+        </div>
+      </div>
+      ${falhaHtml}
+    `;
+    container.appendChild(card);
   });
 }
 
