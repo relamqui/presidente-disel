@@ -268,7 +268,7 @@ def get_media_base64(instance, msg_data):
                     import base64
                     return base64.b64encode(f.read()).decode('utf-8')
         
-        url = f"{WAHA_API_URL}/api/files?session=corpal&messageId={msg_id}"
+        url = f"{WAHA_API_URL}/api/files?session={instance}&messageId={msg_id}"
         res = requests.get(url, headers=get_waha_headers(), timeout=15)
         if res.status_code == 200:
             import base64
@@ -2035,7 +2035,7 @@ def send_message():
             "text": text,
             "linkPreview": True,
             "linkPreviewHighQuality": False,
-            "session": "corpal"
+            "session": inst
         }
         print(f"[SEND] URL: {url}")
         print(f"[SEND] Payload: {json.dumps(payload)}")
@@ -2172,7 +2172,7 @@ def send_audio():
 
         url = f"{WAHA_API_URL}/api/sendVoice"
         payload = {
-            "session": "corpal",
+            "session": inst,
             "chatId": f"{number}@c.us",
             "file": {
                 "mimetype": mimetype,
@@ -2268,7 +2268,7 @@ def send_image():
 
         url = f"{WAHA_API_URL}/api/sendImage"
         payload = {
-            "session": "corpal",
+            "session": inst,
             "chatId": f"{number}@c.us",
             "caption": caption,
             "file": {
@@ -2359,7 +2359,7 @@ def send_video():
 
         url = f"{WAHA_API_URL}/api/sendVideo"
         payload = {
-            "session": "corpal",
+            "session": inst,
             "chatId": f"{number}@c.us",
             "caption": caption,
             "file": {
@@ -2482,7 +2482,7 @@ def send_document():
 
         url = f"{WAHA_API_URL}/api/sendFile"
         payload = {
-            "session": "corpal",
+            "session": inst,
             "chatId": f"{number}@c.us",
             "caption": caption,
             "file": {
@@ -2565,7 +2565,7 @@ def send_location():
 
         url = f"{WAHA_API_URL}/api/sendLocation"
         payload = {
-            "session": "corpal",
+            "session": inst,
             "chatId": f"{number}@c.us",
             "latitude": float(latitude),
             "longitude": float(longitude),
@@ -2650,7 +2650,7 @@ def send_contact():
 
         url = f"{WAHA_API_URL}/api/sendContactVcard"
         payload = {
-            "session": "corpal",
+            "session": inst,
             "chatId": f"{number}@c.us",
             "contacts": [
                 {
@@ -2932,7 +2932,7 @@ start_wait_time_monitor()
 def fetch_and_update_avatar_async(contact_id, phone, instance):
     def _fetch():
         try:
-            url = f"{WAHA_API_URL}/api/contacts/profilePicture?session=corpal&phone={phone}@c.us"
+            url = f"{WAHA_API_URL}/api/contacts/profilePicture?session={instance}&phone={phone}@c.us"
             res = requests.get(url, headers=get_waha_headers(), timeout=10)
             if res.status_code == 200:
                 data = res.json()
@@ -4452,7 +4452,7 @@ def stream_media(media_type):
                     ext = 'oga' if media_type == 'audio' else ('jpeg' if media_type == 'image' else 'mp4')
                     
                 print(f"[{media_type.capitalize()} Proxy] Tentando URL direta do NOWEB: {short_id}.{ext}")
-                waha_url_direct = f"{WAHA_API_URL}/api/files/corpal/{short_id}.{ext}"
+                waha_url_direct = f"{WAHA_API_URL}/api/files/{instance}/{short_id}.{ext}"
                 res = requests.get(waha_url_direct, headers=get_waha_headers(), timeout=10)
                 
         except requests.exceptions.Timeout:
