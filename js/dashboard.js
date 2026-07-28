@@ -675,8 +675,38 @@ async function loadRouteHistory() {
 }
 
 
-function openNovaEntregaModal() {
+let currentEditEntregaId = null;
+
+function openNovaEntregaModal(id = null) {
+  currentEditEntregaId = typeof id === 'number' ? id : null;
   document.getElementById('novaEntregaModal').style.display = 'flex';
+  
+  if (currentEditEntregaId && window.allEntregas) {
+    const ent = window.allEntregas.find(e => e.id === currentEditEntregaId);
+    if (ent) {
+      document.getElementById('entregaNomeCliente').value = ent.nome_cliente || '';
+      document.getElementById('entregaTelefone').value = ent.telefone_cliente || '';
+      document.getElementById('entregaNomePeca').value = ent.nome_peca || '';
+      document.getElementById('entregaTamanhoPeca').value = ent.tamanho_peca || '';
+      document.getElementById('entregaLocalizacao').value = ent.localizacao || '';
+      document.getElementById('entregaPago').checked = !!ent.pago;
+      document.getElementById('entregaFormaPagamento').value = ent.forma_pagamento || '';
+      document.getElementById('entregaValor').value = ent.valor || '';
+      document.getElementById('entregaStatus').value = ent.status || 'Pronto para coleta';
+      document.getElementById('entregaLat').value = ent.latitude || '';
+      document.getElementById('entregaLng').value = ent.longitude || '';
+      
+      togglePagamentoFields();
+      setTimeout(() => { 
+        initLeafletMap(); 
+        if (ent.latitude && ent.longitude) {
+           setTimeout(() => { updateMarker(parseFloat(ent.latitude), parseFloat(ent.longitude)); }, 300);
+        }
+      }, 100);
+      return;
+    }
+  }
+
   document.getElementById('entregaNomeCliente').value = '';
   document.getElementById('entregaTelefone').value = '';
   document.getElementById('entregaNomePeca').value = '';
@@ -808,8 +838,10 @@ async function submitNovaEntrega() {
   }
 
   try {
-    const res = await fetch(`${API_URL}/api/entregas`, {
-      method: 'POST',
+    const method = currentEditEntregaId ? 'PUT' : 'POST';
+    const url = currentEditEntregaId ? `${API_URL}/api/entregas/${currentEditEntregaId}` : `${API_URL}/api/entregas`;
+    const res = await fetch(url, {
+      method: method,
       headers: { 
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
@@ -849,6 +881,7 @@ async function loadEntregas() {
     });
     if (res.ok) {
       const entregas = await res.json();
+      window.allEntregas = entregas; // Store globally for editing
       renderEntregas(entregas);
     }
   } catch (e) {
@@ -933,7 +966,7 @@ function renderEntregas(entregas) {
           <span style="padding:8px 18px; border-radius:24px; font-size:15px; font-weight:800; background:${cfg.bg}; color:${cfg.color}; border:2px solid ${cfg.border}; letter-spacing:0.5px;">
             ${cfg.icon} ${escapeHtml(e.status)}
           </span>
-          <button onclick="openNovaEntregaModal(${e.id})" title="Editar" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:var(--text-secondary);border-radius:8px;padding:8px 12px;cursor:pointer;font-size:18px;">✏️</button>
+          ${e.status !== 'Entregue' ? `<button onclick="openNovaEntregaModal(${e.id})" title="Editar" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:var(--text-secondary);border-radius:8px;padding:8px 12px;cursor:pointer;font-size:18px;">✏️</button>` : ''}
         </div>
       </div>
 

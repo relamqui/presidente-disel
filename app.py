@@ -933,6 +933,29 @@ def update_entrega_status(id):
     db_sql.session.commit()
     return jsonify({'success': True, 'status': entrega.status})
 
+@app.route('/api/entregas/<int:id>', methods=['PUT'])
+@auth_required
+def update_entrega_full(id):
+    entrega = Entrega.query.get(id)
+    if not entrega:
+        return jsonify({'error': 'Entrega não encontrada'}), 404
+    
+    data = request.json
+    if 'nome_peca' in data: entrega.nome_peca = data['nome_peca']
+    if 'tamanho_peca' in data: entrega.tamanho_peca = data['tamanho_peca']
+    if 'nome_cliente' in data: entrega.nome_cliente = data['nome_cliente']
+    if 'localizacao' in data: entrega.localizacao = data['localizacao']
+    if 'telefone_cliente' in data: entrega.telefone_cliente = data['telefone_cliente']
+    if 'pago' in data: entrega.pago = data['pago']
+    if 'forma_pagamento' in data: entrega.forma_pagamento = data['forma_pagamento']
+    if 'valor' in data: entrega.valor = data['valor']
+    if 'status' in data: entrega.status = data['status']
+    if 'latitude' in data: entrega.latitude = data['latitude']
+    if 'longitude' in data: entrega.longitude = data['longitude']
+    
+    db_sql.session.commit()
+    return jsonify({'success': True})
+
 @app.route('/api/entregador/aceitar_entrega', methods=['POST'])
 @auth_required
 def aceitar_entrega():
