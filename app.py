@@ -60,6 +60,78 @@ DATA_DIR = os.path.join(os.getcwd(), 'data')
 if not os.path.exists(DATA_DIR):
     os.makedirs(DATA_DIR)
 
+# ─── Configuração MinIO (S3-compatible) ──────────────────────────────────────
+import boto3
+from botocore.client import Config
+from botocore.exceptions import ClientError
+
+MINIO_ENDPOINT    = os.getenv('MINIO_ENDPOINT',    'https://teste-minio.ioms5g.easypanel.host')
+MINIO_ACCESS_KEY  = os.getenv('MINIO_ACCESS_KEY',  'NU0LDjpxZiQEUbKB8W8l')
+MINIO_SECRET_KEY  = os.getenv('MINIO_SECRET_KEY',  'qW8TfiS6nU3PGCsRb5eLIsYmZIG9WwGRV5BTYvBn')
+MINIO_BUCKET      = os.getenv('MINIO_BUCKET',      'ford-wp')
+
+def _get_minio_client():
+    return boto3.client(
+        's3',
+        endpoint_url=MINIO_ENDPOINT,
+        aws_access_key_id=MINIO_ACCESS_KEY,
+        aws_secret_access_key=MINIO_SECRET_KEY,
+        config=Config(signature_version='s3v4'),
+        region_name='us-east-1'
+    )
+
+def minio_upload(file_bytes: bytes, object_key: str, content_type: str = 'application/octet-stream') -> bool:
+    """Faz upload de bytes para o MinIO. Retorna True em caso de sucesso."""
+    import sys
+    try:
+        s3 = _get_minio_client()
+        s3.put_object(
+            Bucket=MINIO_BUCKET,
+            Key=object_key,
+            Body=file_bytes,
+            ContentType=content_type,
+        )
+        print(f"[MinIO] Upload OK: {object_key} ({len(file_bytes)} bytes)")
+        sys.stdout.flush()
+        return True
+    except Exception as e:
+        print(f"[MinIO] Erro no upload de {object_key}: {e}")
+        sys.stdout.flush()
+        return False
+
+def minio_exists(object_key: str) -> bool:
+    """Verifica se um objeto existe no MinIO."""
+    import sys
+    try:
+        s3 = _get_minio_client()
+        s3.head_object(Bucket=MINIO_BUCKET, Key=object_key)
+        return True
+    except ClientError as e:
+        if e.response['Error']['Code'] == '404':
+            return False
+        print(f"[MinIO] Erro ClientError ao verificar {object_key}: {e}")
+        sys.stdout.flush()
+        return False
+    except Exception as e:
+        print(f"[MinIO] Erro Exception ao verificar {object_key}: {e}")
+        sys.stdout.flush()
+        return False
+
+def minio_presigned_url(object_key: str, expiry: int = 3600) -> str | None:
+    """Gera uma URL temporária (presigned) para acessar o objeto. Expira em `expiry` segundos."""
+    try:
+        s3 = _get_minio_client()
+        url = s3.generate_presigned_url(
+            'get_object',
+            Params={'Bucket': MINIO_BUCKET, 'Key': object_key},
+            ExpiresIn=expiry
+        )
+        return url
+    except Exception as e:
+        print(f"[MinIO] Erro ao gerar presigned URL para {object_key}: {e}")
+        return None
+# ─────────────────────────────────────────────────────────────────────────────
+
 DB_PATH = os.environ.get('DB_PATH', os.path.join(DATA_DIR, 'db.json'))
 DATABASE_URL = os.environ.get('DATABASE_URL', '')
 
@@ -3186,6 +3258,24 @@ def webhook():
                                 f.write(file_bytes_saved)
                         except Exception:
                             pass  # Não é crítico, o short_id já foi salvo
+                            
+                    # ── Upload para MinIO ──────────────────────────────────────
+                    if saved_locally and file_bytes_saved:
+                        _mime_map = {
+                            'image': 'image/jpeg', 'video': 'video/mp4',
+                            'audio': 'audio/ogg', 'ptt': 'audio/ogg',
+                            'voice': 'audio/ogg', 'document': 'application/octet-stream'
+                        }
+                        upload_ct = _mime_map.get(msg_type, 'application/octet-stream')
+                        if media_mimetype:
+                            upload_ct = media_mimetype.split(';')[0].strip()
+                        
+                        minio_key = f"{short_id}{ext}"
+                        minio_upload(file_bytes_saved, minio_key, upload_ct)
+                        
+                        if waha_id != short_id:
+                            minio_upload(file_bytes_saved, f"{waha_id}{ext}", upload_ct)
+                    # ──────────────────────────────────────────────────────────
             # -------------------------------------------------------
 
             # --- Normalizar JID para 12 dígitos ---
@@ -4395,8 +4485,39 @@ def stream_media(media_type):
         # Default mimetypes based on requested media_type
         content_type = 'application/octet-stream'
         if media_type == 'audio': content_type = 'audio/ogg'
-        elif media_type == 'image': content_type = 'image/jpeg'
         elif media_type == 'video': content_type = 'video/mp4'
+
+        # ── 1. Verificar no MinIO (prioridade máxima) ──────────────────────────
+        _ext_map = {
+            'image': ['.jpeg', '.jpg', '.png', ''],
+            'video': ['.mp4', ''],
+            'audio': ['.oga', '.ogg', ''],
+            'document': ['.pdf', '.doc', '.docx', '.bin', '']
+        }
+        _exts = _ext_map.get(media_type, [''])
+        minio_key_found = None
+        
+        short_id = msg_id.split('_')[-1] if '_' in msg_id else msg_id
+        for ext in _exts:
+            _candidate = f"{short_id}{ext}"
+            if minio_exists(_candidate):
+                minio_key_found = _candidate
+                break
+        
+        if not minio_key_found and msg_id != short_id:
+            for ext in _exts:
+                _candidate = f"{msg_id}{ext}"
+                if minio_exists(_candidate):
+                    minio_key_found = _candidate
+                    break
+                    
+        if minio_key_found:
+            presigned = minio_presigned_url(minio_key_found, expiry=3600)
+            if presigned:
+                print(f"[{media_type.capitalize()} Proxy] Redirecionando para MinIO: {minio_key_found}")
+                from flask import redirect
+                return redirect(presigned)
+        # ───────────────────────────────────────────────────────────────────────
 
         # Verificar se o arquivo existe localmente
         media_dir = os.path.join(DATA_DIR, 'media')
@@ -4443,6 +4564,12 @@ def stream_media(media_type):
             
             with open(cache_path, 'rb') as f:
                 file_bytes = f.read()
+                
+            # Oportunisticamente, fazer upload da mídia local para o MinIO para futuras requisições
+            _, local_ext = os.path.splitext(cache_path)
+            local_minio_key = f"{short_id}{local_ext}"
+            if not minio_exists(local_minio_key):
+                minio_upload(file_bytes, local_minio_key, content_type)
                 
             # Content-Disposition inline with fallback to attachment for unknown docs
             cd = 'inline' if media_type in ('audio', 'image', 'video', 'document') else 'attachment'
@@ -4548,6 +4675,16 @@ def stream_media(media_type):
                         pass
             except Exception as e:
                 pass
+                
+            # ── Upload para MinIO após buscar do WAHA ──────────────────────────
+            try:
+                waha_minio_key = f"{short_id}{proxy_ext}"
+                minio_upload(file_bytes, waha_minio_key, content_type)
+                if msg_id != short_id:
+                    minio_upload(file_bytes, f"{msg_id}{proxy_ext}", content_type)
+            except Exception as minio_e:
+                print(f"[MinIO] Erro ao fazer upload após busca WAHA: {minio_e}")
+            # ───────────────────────────────────────────────────────────────────
             
             return Response(file_bytes, mimetype=content_type,
 
