@@ -66,9 +66,9 @@ from botocore.client import Config
 from botocore.exceptions import ClientError
 
 MINIO_ENDPOINT    = os.getenv('MINIO_ENDPOINT',    'https://teste-minio.ioms5g.easypanel.host')
-MINIO_ACCESS_KEY  = os.getenv('MINIO_ACCESS_KEY',  'NU0LDjpxZiQEUbKB8W8l')
-MINIO_SECRET_KEY  = os.getenv('MINIO_SECRET_KEY',  'qW8TfiS6nU3PGCsRb5eLIsYmZIG9WwGRV5BTYvBn')
-MINIO_BUCKET      = os.getenv('MINIO_BUCKET',      'ford-wp')
+MINIO_ACCESS_KEY  = os.getenv('MINIO_ACCESS_KEY',  'WwBXwqD5gy1EMd4tAXfm')
+MINIO_SECRET_KEY  = os.getenv('MINIO_SECRET_KEY',  'JZQYvE2qklBT0cpnSUiKAI7TdzBHMIqIN5wufjMD')
+MINIO_BUCKET      = os.getenv('MINIO_BUCKET',      'presidente')
 
 def _get_minio_client():
     return boto3.client(
