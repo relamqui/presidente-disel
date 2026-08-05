@@ -286,6 +286,15 @@ let _pendingImageIds = new Set();
 let _pendingVideoIds = new Set();
 let _pendingDocIds = new Set();
 
+function playNotificationSound() {
+  try {
+    const audio = new Audio('https://www.myinstants.com/media/sounds/whatsapp-web.mp3');
+    audio.play().catch(e => console.log('Autoplay da notificação bloqueado pelo navegador:', e));
+  } catch (e) {
+    console.error('Erro ao tocar notificação:', e);
+  }
+}
+
 function handleIncomingWebhook(data) {
   console.log('Evento WhatsApp recebido:', data.event);
   
@@ -413,6 +422,14 @@ function handleIncomingWebhook(data) {
       isDuplicate = true;
     } else {
       contact.messages.push(newMsg);
+      
+      // Tocar notificação se for mensagem recebida e o chat não estiver sendo atendido
+      if (!fromMe) {
+        const isAssigned = (contact.tags || []).some(t => typeof t === 'string' && t.toLowerCase().startsWith('atendente:'));
+        if (!isAssigned) {
+          playNotificationSound();
+        }
+      }
     }
 
     // Se for o chat aberto, renderiza
@@ -2927,7 +2944,7 @@ function avatarColor(name) {
 function tagColor(tag) {
   if (tag === 'BOT') return 'tag-purple';
   if (tag.startsWith('Atendente:')) return 'tag-orange';
-  const map = { 'Novo Lead': 'tag-green', 'VIP': 'tag-blue', 'Cliente': 'tag-blue', 'Vendas': 'tag-green', 'Suporte': 'tag-blue', 'Leads': 'tag-green' };
+  const map = { 'Não Lido': 'tag-red', 'Novo Lead': 'tag-green', 'VIP': 'tag-blue', 'Cliente': 'tag-blue', 'Vendas': 'tag-green', 'Suporte': 'tag-blue', 'Leads': 'tag-green' };
   return map[tag] || 'tag-green';
 }
 

@@ -3463,7 +3463,7 @@ def webhook():
                     id=contact_id, name=phone, phone=phone,
                     avatar=phone[0] if phone else "?",
                     instance=instance,
-                    tags=['Novo Lead'], last_msg=text, last_msg_time=time_str,
+                    tags=['Novo Lead'] if fromMe else ['Novo Lead', 'Não Lido'], last_msg=text, last_msg_time=time_str,
                     unread=0 if fromMe else 1
                 )
                 db_sql.session.add(contact)
@@ -3475,6 +3475,12 @@ def webhook():
                 contact.last_msg_time = time_str
                 if not fromMe:
                     contact.unread = (contact.unread or 0) + 1
+                    if not contact.assigned_to:
+                        tags = list(contact.tags or [])
+                        if 'Não Lido' not in tags:
+                            tags.append('Não Lido')
+                        contact.tags = tags
+                        flag_modified(contact, 'tags')
                     
                 # Se não tem foto real (é só uma letra ou '?'), tenta buscar
                 if not contact.avatar or len(contact.avatar) <= 2 or not contact.avatar.startswith('http'):
@@ -3945,6 +3951,8 @@ def assign_chat(id):
         if isinstance(t, str)
         and not t.strip().lower().startswith('atendente:')
         and t.strip().upper() != 'BOT'
+        and t.strip().lower() != 'não lido'
+        and t.strip().lower() != 'nao lido'
     ]
     if atendente_tag not in new_tags:
         new_tags.append(atendente_tag)
