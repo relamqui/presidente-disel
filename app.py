@@ -2291,27 +2291,24 @@ def send_audio():
 
         msg_id = extract_waha_msg_id(res_data, f"audio_out_{int(now.timestamp())}")
         
-        # Salvar o arquivo localmente para poder reproduzir dps (já que o WAHA não armazena arquivos enviados)
+        # Salvar o arquivo no MinIO
         try:
             import base64, re
-            media_dir = os.path.join(DATA_DIR, 'media')
-            os.makedirs(media_dir, exist_ok=True)
-            # Remover quebras de linha e espaços antes de calcular o padding
             clean_b64 = re.sub(r'[^A-Za-z0-9+/]', '', audio_raw)
             pad_raw = clean_b64 + "=" * ((4 - len(clean_b64) % 4) % 4)
-            # Salvar usando o ID original e o SHORT ID para não ter erro caso o webhook retorne ID diferente
             short_id = msg_id.split('_')[-1]
             
             # Forçar extensão
             file_ext = '.webm'
             if 'audio/ogg' in mimetype: file_ext = '.ogg'
             
-            with open(os.path.join(media_dir, msg_id + file_ext), 'wb') as f:
-                f.write(base64.b64decode(pad_raw))
-            with open(os.path.join(media_dir, short_id + file_ext), 'wb') as f:
-                f.write(base64.b64decode(pad_raw))
+            file_bytes = base64.b64decode(pad_raw)
+            
+            minio_upload(file_bytes, msg_id + file_ext, mimetype)
+            if msg_id != short_id:
+                minio_upload(file_bytes, short_id + file_ext, mimetype)
         except Exception as e:
-            print(f"[Send Audio] Erro ao salvar arquivo local: {e}")
+            print(f"[Send Audio] Erro ao salvar arquivo no MinIO: {e}")
 
         text = f"[AUDIO_REF] {inst}|{msg_id}"
 
@@ -2385,11 +2382,9 @@ def send_image():
 
         msg_id = extract_waha_msg_id(res_data, f"img_out_{int(now.timestamp())}")
         
-        # --- NEW CACHING LOGIC ---
+        # --- UPLOAD TO MINIO ---
         try:
             import base64, re
-            media_dir = os.path.join(DATA_DIR, 'media')
-            os.makedirs(media_dir, exist_ok=True)
             clean_b64 = re.sub(r'[^A-Za-z0-9+/]', '', image_raw)
             pad_raw = clean_b64 + "=" * ((4 - len(clean_b64) % 4) % 4)
             short_id = msg_id.split('_')[-1]
@@ -2398,12 +2393,12 @@ def send_image():
             if 'image/png' in mimetype: file_ext = '.png'
             elif 'image/webp' in mimetype: file_ext = '.webp'
             
-            with open(os.path.join(media_dir, msg_id + file_ext), 'wb') as f:
-                f.write(base64.b64decode(pad_raw))
-            with open(os.path.join(media_dir, short_id + file_ext), 'wb') as f:
-                f.write(base64.b64decode(pad_raw))
+            file_bytes = base64.b64decode(pad_raw)
+            minio_upload(file_bytes, msg_id + file_ext, mimetype)
+            if msg_id != short_id:
+                minio_upload(file_bytes, short_id + file_ext, mimetype)
         except Exception as e:
-            print(f"[Send Image] Erro ao salvar arquivo local: {e}")
+            print(f"[Send Image] Erro ao salvar arquivo no MinIO: {e}")
         # -------------------------
 
         text = f"[IMAGE_REF] {inst}|{msg_id}"
@@ -2476,23 +2471,20 @@ def send_video():
 
         msg_id = extract_waha_msg_id(res_data, f"vid_out_{int(now.timestamp())}")
         
-        # --- NEW CACHING LOGIC ---
+        # --- UPLOAD TO MINIO ---
         try:
             import base64, re
-            media_dir = os.path.join(DATA_DIR, 'media')
-            os.makedirs(media_dir, exist_ok=True)
             clean_b64 = re.sub(r'[^A-Za-z0-9+/]', '', video_raw)
             pad_raw = clean_b64 + "=" * ((4 - len(clean_b64) % 4) % 4)
             short_id = msg_id.split('_')[-1]
             
             file_ext = '.mp4'
-            
-            with open(os.path.join(media_dir, msg_id + file_ext), 'wb') as f:
-                f.write(base64.b64decode(pad_raw))
-            with open(os.path.join(media_dir, short_id + file_ext), 'wb') as f:
-                f.write(base64.b64decode(pad_raw))
+            file_bytes = base64.b64decode(pad_raw)
+            minio_upload(file_bytes, msg_id + file_ext, mimetype)
+            if msg_id != short_id:
+                minio_upload(file_bytes, short_id + file_ext, mimetype)
         except Exception as e:
-            print(f"[Send Video] Erro ao salvar arquivo local: {e}")
+            print(f"[Send Video] Erro ao salvar arquivo no MinIO: {e}")
         # -------------------------
 
         text = f"[VIDEO_REF] {inst}|{msg_id}"
@@ -2601,18 +2593,21 @@ def send_document():
 
         msg_id = extract_waha_msg_id(res_data, f"doc_out_{int(now.timestamp())}")
         
-        # --- Renomear do temporário para o ID real ---
+        # --- Upload to MinIO ---
         try:
             short_id = msg_id.split('_')[-1]
-            real_path = os.path.join(media_dir, msg_id + file_ext)
-            real_short_path = os.path.join(media_dir, short_id + file_ext)
+            # Read the temp file bytes to upload to minio
+            with open(temp_path, 'rb') as f:
+                file_bytes = f.read()
+                
+            minio_upload(file_bytes, msg_id + file_ext, mimetype)
+            if msg_id != short_id:
+                minio_upload(file_bytes, short_id + file_ext, mimetype)
             
-            # Copiamos para o msg_id longo
-            shutil.copy(temp_path, real_path)
-            # Renomeamos (movemos) para o msg_id curto
-            os.rename(temp_path, real_short_path)
+            # Remove temp file
+            os.remove(temp_path)
         except Exception as e:
-            print(f"[Send Document] Erro ao renomear cache local: {e}")
+            print(f"[Send Document] Erro ao fazer upload no MinIO: {e}")
         # -------------------------
         
         # --- NEW CACHING LOGIC ---

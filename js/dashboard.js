@@ -583,8 +583,11 @@ async function loadRouteHistory() {
     let html = '';
     historico.forEach(rota => {
       // Formata horários
-      const saiuDate = new Date(rota.saiu_para_entrega_em.replace('Z', '+00:00'));
-      const saiuTime = saiuDate.toLocaleString('pt-BR');
+      let saiuTime = 'Desconhecido';
+      if (rota.saiu_para_entrega_em) {
+        const saiuDate = new Date(rota.saiu_para_entrega_em.replace('Z', '+00:00'));
+        saiuTime = saiuDate.toLocaleString('pt-BR');
+      }
       
       let finalizouTime = 'Em andamento';
       if (rota.finalizado_em) {
