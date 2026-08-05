@@ -2957,7 +2957,12 @@ function startNewChat() {
   // Verifica se há instância selecionada ou pega a primeira do usuário
   let inst = currentInstance;
   if (!inst || inst === 'all') {
-      inst = getDefaultInstance();
+      const user = JSON.parse(localStorage.getItem('wp_crm_user') || '{}');
+      if (user.instances && user.instances.length > 0) {
+          inst = user.instances[0];
+      } else {
+          inst = getDefaultInstance();
+      }
   }
   
   if (!inst) {
