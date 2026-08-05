@@ -998,44 +998,12 @@ function renderChatList(contacts) {
       preview = `👤 ${parts[0] || 'Contato'}`;
     }
 
-    // Tags para mostrar na listagem
-    let visibleTags = [];
-    if (c.tags && c.tags.length > 0) {
-        const atendenteTag = c.tags.find(t => t.startsWith('Atendente:'));
-        const botTag = c.tags.find(t => t === 'BOT');
-        const filialTag = c.tags.find(t => typeof t === 'string' && t.includes(':') && !t.toLowerCase().startsWith('atendente:'));
-        
-        if (atendenteTag) {
-            visibleTags.push({ label: atendenteTag.replace('Atendente:', '').trim(), cls: 'tag-orange' });
-        } else if (botTag) {
-            visibleTags.push({ label: 'BOT', cls: 'tag-purple' });
-        }
-        
-        if (filialTag) {
-            visibleTags.push({ label: filialTag, cls: typeof tagColor === 'function' ? tagColor(filialTag) : 'tag-blue' });
-        }
-        
-        const otherTags = c.tags.filter(t => 
-             !t.toLowerCase().startsWith('atendente:') && 
-             t !== 'BOT' && 
-             !(typeof t === 'string' && t.includes(':') && !t.toLowerCase().startsWith('atendente:')) &&
-             t !== 'Novo Lead' && t !== 'Leads'
-        );
-        
-        otherTags.forEach(other => {
-             visibleTags.push({ label: other, cls: typeof tagColor === 'function' ? tagColor(other) : 'tag-gray' });
-        });
-    }
-    
-    let tagsHtml = visibleTags.map(t => `<span class="chat-list-tag ${t.cls}">${escapeHtml(t.label)}</span>`).join('');
-
     item.innerHTML = `
       <div class="chat-item-avatar" style="background:${avatarColor(c.name)}">${c.avatar}</div>
       <div class="chat-item-body">
         <div class="chat-item-top">
           <span class="chat-item-name">${c.name}</span>
           <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
-             ${tagsHtml}
              <span class="chat-item-time ${timeClass}">${c.time}</span>
           </div>
         </div>
