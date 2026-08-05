@@ -96,6 +96,12 @@ window.onload = async () => {
 function renderUserProfile(user) {
   document.getElementById('userAvatar').textContent = user.name.charAt(0).toUpperCase();
   document.getElementById('userAvatar').title = user.name + ' (' + user.email + ')';
+  
+  const mobileAvatar = document.getElementById('mobileUserAvatar');
+  if (mobileAvatar) {
+    mobileAvatar.textContent = user.name.charAt(0).toUpperCase();
+    mobileAvatar.title = user.name + ' (' + user.email + ')';
+  }
 
   if (user.role === 'admin') {
     document.getElementById('navAdmin').style.display = 'flex';
