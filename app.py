@@ -977,7 +977,7 @@ def create_entrega():
         status=data.get('status', 'Pronto para coleta'),
         latitude=data.get('latitude'),
         longitude=data.get('longitude'),
-        nome_atendente=request.user.get('name', 'Desconhecido'),
+        nome_atendente=User.query.get(request.user['id']).name if User.query.get(request.user['id']) else 'Desconhecido',
         codigo_verificacao=codigo
     )
     db_sql.session.add(nova_entrega)
