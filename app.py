@@ -4534,21 +4534,29 @@ def stream_media(media_type):
             
         if cache_path:
             print(f"[{media_type.capitalize()} Proxy] Servindo do cache local: {cache_path}")
+            import mimetypes
+            guess, _ = mimetypes.guess_type(cache_path)
+            
             if media_type == 'audio':
-                try:
-                    with open(cache_path, 'rb') as f:
-                        header = f.read(4)
-                    if header.startswith(b'OggS'):
+                if guess:
+                    content_type = guess
+                else:
+                    try:
+                        with open(cache_path, 'rb') as f:
+                            header = f.read(4)
+                        if header.startswith(b'OggS'):
+                            content_type = 'audio/ogg'
+                        elif header.startswith(b'\x1aE\xdf\xa3'):
+                            content_type = 'audio/webm'
+                        elif header.startswith(b'ID3') or header.startswith(b'\xff\xfb'):
+                            content_type = 'audio/mpeg'
+                        elif header[4:8] == b'ftyp':
+                            content_type = 'audio/mp4'
+                        else:
+                            content_type = 'audio/ogg' # safer fallback than webm
+                    except:
                         content_type = 'audio/ogg'
-                    elif header.startswith(b'\x1aE\xdf\xa3'):
-                        content_type = 'audio/webm'
-                    else:
-                        content_type = 'audio/webm'
-                except:
-                    content_type = 'audio/webm'
             elif media_type == 'document':
-                import mimetypes
-                guess, _ = mimetypes.guess_type(cache_path)
                 if guess:
                     content_type = guess
                 else:
