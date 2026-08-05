@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/login.css" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 </head>
 <body>
   <div class="bg-animation">
@@ -106,7 +107,7 @@
           // Store token and user info
           localStorage.setItem('wp_crm_token', data.token);
           localStorage.setItem('wp_crm_user', JSON.stringify(data.user));
-          window.location.href = 'dashboard.html';
+          window.location.href = 'dashboard';
         } else {
           throw new Error(data.error || 'Credenciais invlidas');
         }

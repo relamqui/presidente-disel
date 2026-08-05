@@ -208,6 +208,7 @@
       cursor: pointer;
     }
   </style>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 </head>
 
 <body>
@@ -478,7 +479,7 @@
     // Carregar dados iniciais
     window.onload = async () => {
       const token = localStorage.getItem('wp_crm_token');
-      if (!token) window.location.href = 'index.html';
+      if (!token) window.location.href = 'index';
 
       try {
         const payload = JSON.parse(atob(token.split('.')[1]));

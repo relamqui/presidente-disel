@@ -54,7 +54,7 @@ window.onload = async () => {
   if (overlay) overlay.style.display = 'flex';
 
   if (!userStr || !token) {
-    window.location.href = 'index.html';
+    window.location.href = 'index';
     return;
   }
 
@@ -76,7 +76,7 @@ window.onload = async () => {
     } catch (e2) {
       console.error('[INIT] Segunda tentativa falhou:', e2);
       if (loadingMsg) loadingMsg.textContent = 'Falha na conexao. Redirecionando...';
-      setTimeout(() => { window.location.href = 'index.html'; }, 3000);
+      setTimeout(() => { window.location.href = 'index'; }, 3000);
       return;
     }
   }
@@ -2999,7 +2999,7 @@ function startNewChat() {
 function logout() {
   localStorage.clear();
   sessionStorage.clear();
-  window.location.href = 'index.html';
+  window.location.href = 'index';
 }
 
 function showToast(msg) {
