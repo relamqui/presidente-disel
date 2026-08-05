@@ -3564,3 +3564,41 @@ function confirmImageCrop() {
     }
   }, 'image/jpeg', 0.85);
 }
+
+// ==========================================
+// PWA & INSTALLATION (DASHBOARD)
+// ==========================================
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw_dashboard.js').catch(err => {
+      console.warn('Service Worker registration failed:', err);
+    });
+  });
+}
+
+let deferredPrompt;
+const installBtn = document.getElementById('installDashboardBtn');
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  if (installBtn) installBtn.style.display = 'block';
+});
+
+if (installBtn) {
+  installBtn.addEventListener('click', async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        installBtn.style.display = 'none';
+      }
+      deferredPrompt = null;
+    }
+  });
+}
+
+window.addEventListener('appinstalled', () => {
+  if (installBtn) installBtn.style.display = 'none';
+  deferredPrompt = null;
+});
