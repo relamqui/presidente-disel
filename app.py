@@ -3572,22 +3572,8 @@ def webhook():
 @app.route('/api/contacts', methods=['GET'])
 @auth_required
 def get_contacts():
-    user = User.query.get(request.user['id'])
-    allowed_instances = get_gestor_allowed_instances(user)
-    
-    if request.user.get('role') == 'admin':
-        # Admin vê todos os chats
-        contacts = Contact.query.all()
-    elif user.role == 'user':
-        # Usuário comum: busca todos os contatos (o filtro por email é feito abaixo)
-        # Não limita por instância para que usuários sem instância configurada possam ver seus chats
-        contacts = Contact.query.all()
-    else:
-        # Gestor: Buscar contatos das instâncias permitidas
-        if allowed_instances:
-            contacts = Contact.query.filter(Contact.instance.in_(allowed_instances)).all()
-        else:
-            contacts = []
+    # Todos os usuários veem todos os chats sem restrições
+    contacts = Contact.query.all()
 
     contacts_list = []
     for c in contacts:

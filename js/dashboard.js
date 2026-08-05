@@ -124,43 +124,7 @@ async function loadContacts() {
     if (res.ok) {
       let contacts = await res.json();
       
-      // ── Filtro de segurança no cliente (segunda camada) ──
-      const userData = JSON.parse(localStorage.getItem('wp_crm_user') || '{}');
-      if (userData.role !== 'admin') {
-        const myFilial = userData.filial || '';
-        const mySetor = userData.setor || '';
-        
-        contacts = contacts.filter(c => {
-          const tags = c.tags || [];
-          
-          // Detectar tags no formato "Filial:Setor"
-          // Regra: manter o contato se PELO MENOS UMA tag Filial:Setor é da minha filial
-          // (transferências criam tags de múltiplas filiais intencionalmente)
-          const filialTags = tags.filter(t => typeof t === 'string' && t.includes(':') && !t.toLowerCase().startsWith('atendente:'));
-          if (filialTags.length > 0 && myFilial) {
-            const hasMyFilial = filialTags.some(t => t.split(':')[0] === myFilial);
-            if (!hasMyFilial) {
-              return false; // Nenhuma tag Filial:Setor é da minha filial
-            }
-          }
-          
-          // Para gestor: exibir contatos com tag da sua filial ou sem tag de filial
-          if (userData.role === 'gestor') {
-            return true; // Já passou pelo filtro acima (não tem tag de outra filial)
-          }
-          
-          // Para user comum: só exibir se tem a tag exata do seu email ou atribuído a mim
-          if (userData.email) {
-            const requiredTag = userData.email.toLowerCase();
-            const hasMyTag = tags.some(t => typeof t === 'string' && t.toLowerCase() === requiredTag);
-            const assignedToMe = c.assigned_to === userData.id;
-            return hasMyTag || assignedToMe;
-          }
-          
-          return true;
-        });
-      }
-      
+      // Filtro de segurança no cliente removido para acesso total
       // ── Mesclar com contatos existentes, preservando mensagens carregadas ──
       const existingMap = new Map(CONTACTS.map(c => [c.id, c]));
       contacts.forEach(c => {
@@ -271,29 +235,7 @@ function initSocket(token) {
       if (contact) {
         contact.tags = data.tags;
         
-        // ── Filtro de segurança: remover contato se NENHUMA tag Filial:Setor é da minha filial ──
-        const userData = JSON.parse(localStorage.getItem('wp_crm_user') || '{}');
-        if (userData.role !== 'admin' && userData.filial) {
-          const newTags = data.tags || [];
-          const filialTags = newTags.filter(t => typeof t === 'string' && t.includes(':') && !t.toLowerCase().startsWith('atendente:'));
-          if (filialTags.length > 0) {
-            const hasMyFilial = filialTags.some(t => t.split(':')[0] === userData.filial);
-            if (!hasMyFilial) {
-              // Nenhuma tag Filial:Setor é da minha filial — remover da lista
-              console.log('[Socket] Contato não pertence à minha filial, removendo:', contact.id, filialTags);
-              CONTACTS = CONTACTS.filter(c => c.id !== contact.id);
-              if (currentChat && currentChat.id === contact.id) {
-                currentChat = null;
-                document.getElementById('chatEmpty').style.display = 'flex';
-                document.getElementById('chatInterface').style.display = 'none';
-              }
-              renderChatList(getFilteredContacts());
-              renderTagFilter();
-              return;
-            }
-          }
-        }
-        
+        // Filtro de segurança por filial removido para acesso total
         if (currentChat && currentChat.id === contact.id) {
             currentChat.tags = data.tags;
             updateContactDetails(currentChat);
@@ -302,32 +244,12 @@ function initSocket(token) {
         renderTagFilter();
         console.log('[Socket] Tags atualizadas para:', contact.id, data.tags);
       } else {
-        // Contato não está na lista local — pode ser um chat transferido para mim
-        // Verifica se alguma das novas tags é do meu setor para forçar reload
-        const userData = JSON.parse(localStorage.getItem('wp_crm_user') || '{}');
-        if (userData.role !== 'admin' && userData.filial && userData.setor) {
-          const myTag = `${userData.filial}:${userData.setor}`;
-          if (data.tags && data.tags.includes(myTag)) {
-            console.log('[Socket] Chat transferido para meu setor detectado, recarregando contatos:', data.id);
-            loadContacts().then(() => {
-              renderTagFilter();
-              renderChatList(getFilteredContacts());
-            });
-            return;
-          }
-        } else if (userData.role === 'gestor' && userData.filial) {
-          const newTags = data.tags || [];
-          const hasMyFilial = newTags.some(t => typeof t === 'string' && t.includes(':') && !t.toLowerCase().startsWith('atendente:') && t.split(':')[0] === userData.filial);
-          if (hasMyFilial) {
-            console.log('[Socket] Chat transferido para minha filial (gestor), recarregando:', data.id);
-            loadContacts().then(() => {
-              renderTagFilter();
-              renderChatList(getFilteredContacts());
-            });
-            return;
-          }
-        }
-        console.warn('[Socket] Contato não encontrado para atualizar tags:', data.id);
+        // Contato não está na lista local
+        console.log('[Socket] Contato não encontrado localmente, recarregando contatos:', data.id);
+        loadContacts().then(() => {
+          renderTagFilter();
+          renderChatList(getFilteredContacts());
+        });
       }
     });
 
