@@ -19,6 +19,22 @@ function getDefaultInstance() {
     return 'presidente';
 }
 
+function resolveTargetInstance(chat) {
+    let targetInstance = chat.instance || chat.instanceName;
+    try {
+        const userData = JSON.parse(localStorage.getItem('wp_crm_user') || '{}');
+        if (userData.instances && userData.instances.length > 0) {
+            return userData.instances[0];
+        }
+    } catch(e) {}
+    
+    if (!targetInstance || targetInstance.startsWith('inst')) {
+        return getDefaultInstance();
+    }
+    return targetInstance;
+}
+
+
 // ─── Init ─────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   // checkAuth(); // Replaced by window.onload
@@ -1514,14 +1530,9 @@ async function sendMessage() {
     // Sanatiza o numero (remove +, space, -, etc)
     const cleanNumber = currentChat.phone.replace(/\D/g, '');
     
-    // Se a instância for mock (inst1, inst2...), tenta pegar uma real
-    let targetInstance = currentChat.instance;
-    if (targetInstance.startsWith('inst')) {
-       // Busca primeiro nome de instância real que o usuário tem
-       targetInstance = getDefaultInstance();
-       if (!targetInstance) {
-         throw new Error('Nenhuma instância do WhatsApp vinculada a este usuário.');
-       }
+    const targetInstance = resolveTargetInstance(currentChat);
+    if (!targetInstance) {
+      throw new Error('Nenhuma instância do WhatsApp vinculada a este usuário.');
     }
 
     const response = await fetch(`${API_URL}/api/whatsapp/send`, {
@@ -1860,12 +1871,9 @@ async function sendAudioMessage(base64Data) {
 
   // Send to backend
   try {
-    let targetInstance = currentChat.instance;
-    if (targetInstance.startsWith('inst')) {
-      targetInstance = getDefaultInstance();
-      if (!targetInstance) {
+    const targetInstance = resolveTargetInstance(currentChat);
+    if (!targetInstance) {
         throw new Error('Nenhuma instância vinculada.');
-      }
     }
 
     const cleanNumber = currentChat.phone.replace(/\D/g, '');
@@ -2323,12 +2331,9 @@ async function sendImageMessage(file) {
     renderChatList(getFilteredContacts());
     
     try {
-      let targetInstance = currentChat.instance;
-      if (targetInstance.startsWith('inst')) {
-        targetInstance = getDefaultInstance();
-        if (!targetInstance) {
-          throw new Error('Nenhuma instância vinculada.');
-        }
+      const targetInstance = resolveTargetInstance(currentChat);
+      if (!targetInstance) {
+        throw new Error('Nenhuma instância vinculada.');
       }
       
       const cleanNumber = currentChat.phone.replace(/\D/g, '');
@@ -2395,12 +2400,9 @@ async function sendVideoMessage(file) {
     renderChatList(getFilteredContacts());
     
     try {
-      let targetInstance = currentChat.instance;
-      if (targetInstance.startsWith('inst')) {
-        targetInstance = getDefaultInstance();
-        if (!targetInstance) {
-          throw new Error('Nenhuma instância vinculada.');
-        }
+      const targetInstance = resolveTargetInstance(currentChat);
+      if (!targetInstance) {
+        throw new Error('Nenhuma instância vinculada.');
       }
       
       const cleanNumber = currentChat.phone.replace(/\D/g, '');
@@ -2458,14 +2460,10 @@ async function sendDocumentMessage(file) {
     
     const tempId = 'doc_temp_' + Date.now();
     
-    // Resolve instância antes para poder montar o DOC_REF temporário
-    let targetInstance = currentChat.instance;
-    if (targetInstance.startsWith('inst')) {
-      targetInstance = getDefaultInstance();
-      if (!targetInstance) {
-        showToast('Nenhuma instância vinculada.');
-        return;
-      }
+    const targetInstance = resolveTargetInstance(currentChat);
+    if (!targetInstance) {
+      showToast('Nenhuma instância configurada.');
+      return;
     }
     
     // Enquanto o upload ocorre, mostra estado 'Enviando...' (sem link clicável)
@@ -3226,7 +3224,7 @@ async function sendLocationMessage() {
     navigator.geolocation.getCurrentPosition(async (position) => {
       const lat = position.coords.latitude;
       const lng = position.coords.longitude;
-      const targetInstance = currentChat.instanceName || currentChat.instance;
+      const targetInstance = resolveTargetInstance(currentChat);
       const cleanNumber = currentChat.phone.replace(/\D/g, '');
 
       try {
@@ -3312,7 +3310,7 @@ async function confirmSendContact() {
     return;
   }
 
-  const targetInstance = currentChat.instanceName || currentChat.instance;
+  const targetInstance = resolveTargetInstance(currentChat);
   const cleanNumber = currentChat.phone.replace(/\D/g, '');
 
   let formattedContactPhone = contactPhone.replace(/\D/g, '');
