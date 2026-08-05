@@ -1085,7 +1085,7 @@ body {
 }
 
 /* ======== RESPONSIVE MOBILE ======== */
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
   .app-container {
     display: flex;
     flex-direction: column;
@@ -1191,7 +1191,7 @@ body {
 }
 
 /* Ocultar boao de voltar no desktop */
-@media (min-width: 769px) {
+@media (min-width: 1025px) {
   .mobile-back-btn {
     display: none;
   }

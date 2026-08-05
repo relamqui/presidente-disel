@@ -465,10 +465,10 @@ function setView(view) {
     document.getElementById('adminEntregadoresView').style.display = 'flex';
     loadAdminEntregadores();
   } else {
-    document.getElementById('panelList').style.display = 'flex';
-    document.getElementById('chatArea').style.display = 'flex';
+    document.getElementById('panelList').style.display = '';
+    document.getElementById('chatArea').style.display = '';
     if (currentChat) {
-      document.getElementById('sidebarDetails').style.display = 'flex';
+      document.getElementById('sidebarDetails').style.display = '';
     }
     
     const panelEntregas = document.getElementById('panelEntregas');
@@ -1043,7 +1043,7 @@ async function openChat(id) {
   // Show mobile back btn selectively using css media query or just let css handle
   const mobileBackBtn = document.querySelector('.mobile-back-btn');
   if (mobileBackBtn) {
-    mobileBackBtn.style.display = window.innerWidth <= 768 ? 'flex' : 'none';
+    mobileBackBtn.style.display = window.innerWidth <= 1024 ? 'flex' : 'none';
   }
   
   // Header
@@ -1885,7 +1885,14 @@ function updateContactDetails(contact) {
 
 function toggleSidebar() {
   sidebarOpen = !sidebarOpen;
-  document.getElementById('sidebarDetails').style.display = sidebarOpen ? '' : 'none';
+  const sd = document.getElementById('sidebarDetails');
+  if (window.innerWidth <= 1024) {
+    if (sidebarOpen) sd.classList.add('open');
+    else sd.classList.remove('open');
+    sd.style.display = ''; // always let CSS handle display on mobile
+  } else {
+    sd.style.display = sidebarOpen ? '' : 'none';
+  }
 }
 
 // ─── Instances Modal ──────────────────────────────────────────────────────────
