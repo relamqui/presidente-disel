@@ -160,12 +160,32 @@ document.addEventListener('DOMContentLoaded', () => {
     showScreen('loginScreen');
   }
 
-  // iOS detection - show tip since Safari doesn't support beforeinstallprompt
   const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
   const isInStandaloneMode = window.matchMedia('(display-mode: standalone)').matches;
   const iosTip = document.getElementById('iosTip');
   if (isIos && !isInStandaloneMode && iosTip) {
     iosTip.style.display = 'flex';
+  }
+
+  // --- Socket.IO Notifications ---
+  if (typeof io !== 'undefined') {
+    const socket = io();
+    socket.on('nova_entrega', (data) => {
+      // Play a short beep if possible (using browser AudioContext or simple alert if fallback)
+      if (Notification.permission === 'granted') {
+        new Notification('Nova Entrega!', {
+          body: `Nova entrega para ${data.nome_cliente}. Acesse para coletar!`,
+          icon: '/Logo.png'
+        });
+      } else {
+        alert(`Nova Entrega!\nTemos uma nova entrega para ${data.nome_cliente}. Acesse para coletar!`);
+      }
+      
+      // Se estiver na aba de disponíveis, recarrega a lista
+      if (currentTab === 'disponiveis') {
+        loadEntregas();
+      }
+    });
   }
 });
 

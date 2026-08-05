@@ -992,6 +992,12 @@ def create_entrega():
     except Exception as e:
         print("Erro ao enviar push de nova entrega:", e)
         
+    socketio.emit('nova_entrega', {
+        'id': nova_entrega.id, 
+        'nome_cliente': nova_entrega.nome_cliente,
+        'localizacao': nova_entrega.localizacao
+    })
+        
     return jsonify({'success': True, 'id': nova_entrega.id, 'codigo': codigo})
 
 @app.route('/api/entregas/<int:id>/status', methods=['PUT'])
