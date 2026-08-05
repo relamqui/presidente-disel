@@ -16,7 +16,7 @@ let emojiVisible = false;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function getDefaultInstance() {
-    return 'corpal';
+    return 'presidente';
 }
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
