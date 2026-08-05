@@ -1124,7 +1124,11 @@ body {
   .sidebar-bottom { 
     flex-direction: row; 
     padding: 0 10px; 
-    display: none; /* Oculta a foto/logout na barra inferior para economizar espaço, ou podemos ajustar */
+    display: none; /* Mantém oculto na barra inferior para evitar muita coisa espremida */
+  }
+  
+  .mobile-logout-btn {
+    display: inline-flex !important;
   }
 
   /* Painel de lista ocupa a tela toda (menos os 60px da base) se o chat nao estiver aberto */
