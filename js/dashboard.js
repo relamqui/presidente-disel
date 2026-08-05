@@ -288,10 +288,28 @@ let _pendingDocIds = new Set();
 
 function playNotificationSound() {
   try {
-    const audio = new Audio('https://www.myinstants.com/media/sounds/whatsapp-web.mp3');
-    audio.play().catch(e => console.log('Autoplay da notificação bloqueado pelo navegador:', e));
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+
+    osc.connect(gainNode);
+    gainNode.connect(ctx.destination);
+
+    // Configuração para um som suave tipo "pop" de notificação
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(600, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.1);
+    
+    gainNode.gain.setValueAtTime(0, ctx.currentTime);
+    gainNode.gain.linearRampToValueAtTime(0.5, ctx.currentTime + 0.05);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.3);
   } catch (e) {
-    console.error('Erro ao tocar notificação:', e);
+    console.log('Erro no áudio de notificação:', e);
   }
 }
 
@@ -428,6 +446,15 @@ function handleIncomingWebhook(data) {
         const isAssigned = (contact.tags || []).some(t => typeof t === 'string' && t.toLowerCase().startsWith('atendente:'));
         if (!isAssigned) {
           playNotificationSound();
+          
+          if (!contact.tags) contact.tags = [];
+          if (!contact.tags.includes('Não Lido')) {
+            contact.tags.push('Não Lido');
+            // Se for o chat aberto, atualiza a barra lateral (details)
+            if (currentChat && currentChat.id === contact.id) {
+              updateContactDetails(contact);
+            }
+          }
         }
       }
     }
