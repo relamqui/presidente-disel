@@ -31,6 +31,32 @@ load_dotenv()
 WAHA_API_URL = os.getenv('WAHA_API_URL', 'http://localhost:3000').rstrip('/')
 WAHA_API_KEY = os.getenv('WAHA_API_KEY', '')
 
+
+def waha_post_with_fallback(url, payload, headers, timeout=30):
+    import copy, requests
+    res = requests.post(url, json=payload, headers=headers, timeout=timeout)
+    if res.status_code not in (200, 201):
+        chat_id = payload.get("chatId", "")
+        if "@c.us" in chat_id:
+            number = chat_id.replace("@c.us", "")
+            if len(number) == 12 and number.startswith("55"):
+                fallback_number = number[:4] + "9" + number[4:]
+                print(f"[FALLBACK] Tentando com 9 digitos: {fallback_number}")
+                payload_fallback = copy.deepcopy(payload)
+                payload_fallback["chatId"] = f"{fallback_number}@c.us"
+                res2 = requests.post(url, json=payload_fallback, headers=headers, timeout=timeout)
+                if res2.status_code in (200, 201):
+                    return res2
+            elif len(number) == 13 and number.startswith("55"):
+                fallback_number = number[:4] + number[5:]
+                print(f"[FALLBACK] Tentando com 8 digitos: {fallback_number}")
+                payload_fallback = copy.deepcopy(payload)
+                payload_fallback["chatId"] = f"{fallback_number}@c.us"
+                res2 = requests.post(url, json=payload_fallback, headers=headers, timeout=timeout)
+                if res2.status_code in (200, 201):
+                    return res2
+    return res
+
 def get_waha_headers():
     headers = {'Content-Type': 'application/json', 'Accept': 'application/json'}
     if WAHA_API_KEY:
@@ -2140,7 +2166,7 @@ def send_message():
         }
         print(f"[SEND] URL: {url}")
         print(f"[SEND] Payload: {json.dumps(payload)}")
-        res = requests.post(url, json=payload, headers=get_waha_headers(), timeout=30)
+        res = waha_post_with_fallback(url, payload, headers=get_waha_headers(), timeout=30)
         print(f"[SEND] Response status: {res.status_code}")
         print(f"[SEND] Response body: {res.text[:300]}")
         try:
@@ -2282,7 +2308,7 @@ def send_audio():
             "convert": True
         }
         print(f"[Send Audio] Enviando audio para {number} via {inst}")
-        res = requests.post(url, json=payload, headers=get_waha_headers(), timeout=30)
+        res = waha_post_with_fallback(url, payload, headers=get_waha_headers(), timeout=30)
         try:
             res_data = res.json()
         except Exception:
@@ -2374,7 +2400,7 @@ def send_image():
                 "data": image_raw
             }
         }
-        res = requests.post(url, json=payload, headers=get_waha_headers(), timeout=30)
+        res = waha_post_with_fallback(url, payload, headers=get_waha_headers(), timeout=30)
         try:
             res_data = res.json()
         except Exception:
@@ -2463,7 +2489,7 @@ def send_video():
                 "data": video_raw
             }
         }
-        res = requests.post(url, json=payload, headers=get_waha_headers(), timeout=60)
+        res = waha_post_with_fallback(url, payload, headers=get_waha_headers(), timeout=60)
         try:
             res_data = res.json()
         except Exception:
@@ -2585,7 +2611,7 @@ def send_document():
             }
         }
         print(f"[Send Document] Enviando para WAHA via URL: {doc_url}")
-        res = requests.post(url, json=payload, headers=get_waha_headers(), timeout=60)
+        res = waha_post_with_fallback(url, payload, headers=get_waha_headers(), timeout=60)
         try:
             res_data = res.json()
         except Exception:
@@ -2668,7 +2694,7 @@ def send_location():
             "title": name,
             "description": address
         }
-        res = requests.post(url, json=payload, headers=get_waha_headers(), timeout=60)
+        res = waha_post_with_fallback(url, payload, headers=get_waha_headers(), timeout=60)
         res.raise_for_status()
         try:
             res_data = res.json()
@@ -2756,7 +2782,7 @@ def send_contact():
             ]
         }
         print(f"[Send Contact] Enviando contato '{contact_name}' ({contact_phone}) para {number} via {inst}")
-        res = requests.post(url, json=payload, headers=get_waha_headers(), timeout=30)
+        res = waha_post_with_fallback(url, payload, headers=get_waha_headers(), timeout=30)
         try:
             res_data = res.json()
         except Exception:
