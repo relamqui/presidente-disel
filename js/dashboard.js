@@ -828,6 +828,12 @@ async function submitNovaEntrega() {
     return;
   }
 
+  const btnSalvar = document.getElementById('btnSalvarEntrega');
+  if (btnSalvar) {
+    btnSalvar.disabled = true;
+    btnSalvar.innerHTML = '<span style="display:inline-block; animation: spin 1s linear infinite;">⏳</span> Salvando...';
+  }
+
   try {
     const method = currentEditEntregaId ? 'PUT' : 'POST';
     const url = currentEditEntregaId ? `${API_URL}/api/entregas/${currentEditEntregaId}` : `${API_URL}/api/entregas`;
@@ -861,6 +867,11 @@ async function submitNovaEntrega() {
     }
   } catch (e) {
     console.error('Erro ao salvar entrega:', e);
+  } finally {
+    if (btnSalvar) {
+      btnSalvar.disabled = false;
+      btnSalvar.innerHTML = 'Salvar Entrega';
+    }
   }
 }
 
