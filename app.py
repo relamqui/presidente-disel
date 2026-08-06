@@ -1079,6 +1079,17 @@ def update_entrega_status(id):
     db_sql.session.commit()
     return jsonify({'success': True, 'status': entrega.status})
 
+@app.route('/api/entregas/<int:id>', methods=['DELETE'])
+@auth_required
+def delete_entrega(id):
+    # Opcional: verificar se usuário tem cargo admin, ou fazer a verificação apenas no frontend se o backend confia no auth
+    entrega = Entrega.query.get(id)
+    if not entrega:
+        return jsonify({'error': 'Entrega não encontrada'}), 404
+    db_sql.session.delete(entrega)
+    db_sql.session.commit()
+    return jsonify({'success': True, 'message': 'Entrega deletada com sucesso'}), 200
+
 @app.route('/api/entregas/<int:id>', methods=['PUT'])
 @auth_required
 def update_entrega_full(id):

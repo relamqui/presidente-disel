@@ -881,6 +881,8 @@ async function loadEntregas() {
 }
 
 function renderEntregas(entregas) {
+  const user = JSON.parse(localStorage.getItem('wp_crm_user') || '{}');
+  const isAdmin = user.role === 'admin';
   const tbody = document.getElementById('listaEntregasBody');
   if (!tbody) return;
   tbody.innerHTML = '';
@@ -958,6 +960,7 @@ function renderEntregas(entregas) {
             ${cfg.icon} ${escapeHtml(e.status)}
           </span>
           ${e.status !== 'Entregue' ? `<button onclick="openNovaEntregaModal(${e.id})" title="Editar" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:var(--text-secondary);border-radius:8px;padding:8px 12px;cursor:pointer;font-size:18px;">✏️</button>` : ''}
+          ${isAdmin ? `<button onclick="deleteEntrega(${e.id})" title="Deletar" style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#ef4444;border-radius:8px;padding:8px 12px;cursor:pointer;font-size:18px;">🗑️</button>` : ''}
         </div>
       </div>
 
@@ -1009,6 +1012,22 @@ async function updateEntregaStatus(id, novoStatus) {
   }
 }
 
+async function deleteEntrega(id) {
+  if (!confirm('Tem certeza que deseja deletar esta entrega? Esta ação não pode ser desfeita.')) return;
+  try {
+    const response = await fetch(`${API_URL}/api/entregas/${id}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('wp_crm_token')}` }
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Erro ao deletar entrega');
+    showToast('Entrega deletada com sucesso!');
+    loadEntregas();
+  } catch (err) {
+    console.error(err);
+    showToast(err.message);
+  }
+}
 
 // ─── Chat Badge ───────────────────────────────────────────────────────────────
 function updateChatBadge() {
