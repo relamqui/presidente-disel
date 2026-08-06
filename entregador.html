@@ -124,12 +124,25 @@
   <!-- MODAL DE SENHA DE ADMIN -->
   <div id="modalSenhaAdmin" class="modal-overlay" style="display:none;">
     <div class="modal-content">
-      <h3>Confirmação à Distância</h3>
-      <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 12px;">Você está fora do raio permitido para entrega. Solicite a senha de um gestor para liberar.</p>
-      <input type="password" id="inputSenhaAdmin" placeholder="Senha do Gestor" class="modal-input" />
+      <h3>Autorização à Distância</h3>
+      <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 12px;">Você está fora do raio permitido. Solicite o código de 6 dígitos gerado pelo Gestor.</p>
+      <input type="number" id="inputSenhaAdmin" placeholder="Código de 6 dígitos" class="modal-input" />
       <div class="modal-actions">
         <button class="btn-secondary" onclick="fecharModalSenha()">Cancelar</button>
-        <button class="btn-primary" style="background:var(--primary)" onclick="confirmarSenhaAdmin()">Validar e Concluir</button>
+        <button class="btn-primary" style="background:var(--primary)" onclick="confirmarSenhaAdmin()">Validar Código</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE JUSTIFICATIVA (DISTANCIA) -->
+  <div id="modalJustificativaDistancia" class="modal-overlay" style="display:none;">
+    <div class="modal-content">
+      <h3>Motivo da Entrega</h3>
+      <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 12px;">Por que você está realizando a entrega fora do raio estabelecido?</p>
+      <textarea id="inputJustificativaDistancia" class="modal-input" rows="3" placeholder="Ex: Cliente pediu para entregar na portaria, GPS com erro..."></textarea>
+      <div class="modal-actions">
+        <button class="btn-secondary" onclick="fecharModalJustificativaDistancia()">Cancelar</button>
+        <button class="btn-primary" style="background:var(--primary)" onclick="confirmarJustificativaDistancia()">Confirmar Entrega</button>
       </div>
     </div>
   </div>

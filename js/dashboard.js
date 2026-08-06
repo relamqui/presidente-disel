@@ -124,6 +124,8 @@ function renderUserProfile(user) {
     document.getElementById('navReports').style.display = 'flex';
     const btnNavAdminEntregadores = document.getElementById('navAdminEntregadores');
     if (btnNavAdminEntregadores) btnNavAdminEntregadores.style.display = 'flex';
+    const btnGerarCodigoLib = document.getElementById('btnGerarCodigoLib');
+    if (btnGerarCodigoLib) btnGerarCodigoLib.style.display = 'flex';
   }
   
   // O botão de transferência agora é controlado dentro do updateAttendanceBar
@@ -3763,3 +3765,31 @@ window.addEventListener('appinstalled', () => {
   if (installBtn) installBtn.style.display = 'none';
   deferredPrompt = null;
 });
+// Helper for dashboard admin code generation
+async function gerarCodigoLiberacao() {
+  const token = localStorage.getItem('wp_crm_token');
+  try {
+    const btn = document.getElementById('btnGerarCodigoLib');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '⏳ Gerando...';
+    btn.disabled = true;
+
+    const res = await fetch(`${API_URL}/api/admin/gerar_codigo`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    
+    btn.innerHTML = originalText;
+    btn.disabled = false;
+
+    if (!res.ok) {
+      alert('Erro ao gerar código.');
+      return;
+    }
+    const data = await res.json();
+    alert(`CÓDIGO DE AUTORIZAÇÃO GERADO:\n\n👉  ${data.codigo}  👈\n\nEste código é válido por 10 minutos e deve ser informado no app do Entregador.`);
+  } catch (err) {
+    console.error(err);
+    alert('Falha na comunicação com o servidor.');
+  }
+}

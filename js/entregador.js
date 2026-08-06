@@ -664,22 +664,57 @@ function fecharModalSenha() {
   document.getElementById('modalSenhaAdmin').style.display = 'none';
 }
 
-function confirmarSenhaAdmin() {
-  const senha = document.getElementById('inputSenhaAdmin').value;
-  // TODO: Em um sistema ideal, isso é checado no backend. Para o protótipo usaremos um hardcode ou fallback
-  if (senha === 'admin123') {
-    fecharModalSenha();
-    concluirEntregaAtual();
-  } else {
-    alert("Senha incorreta!");
+async function confirmarSenhaAdmin() {
+  const codigo = document.getElementById('inputSenhaAdmin').value;
+  if (!codigo) {
+    alert("Digite o código.");
+    return;
   }
+  
+  const token = localStorage.getItem('entregador_token');
+  try {
+    const res = await fetch(`${API_URL}/api/entregador/verificar_codigo`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ codigo })
+    });
+    
+    if (res.ok) {
+      fecharModalSenha();
+      document.getElementById('inputJustificativaDistancia').value = '';
+      document.getElementById('modalJustificativaDistancia').style.display = 'flex';
+    } else {
+      const data = await res.json();
+      alert(data.error || "Código incorreto!");
+    }
+  } catch (err) {
+    console.error(err);
+    alert('Erro ao validar código.');
+  }
+}
+
+function fecharModalJustificativaDistancia() {
+  document.getElementById('modalJustificativaDistancia').style.display = 'none';
+}
+
+function confirmarJustificativaDistancia() {
+  const justificativa = document.getElementById('inputJustificativaDistancia').value.trim();
+  if (!justificativa) {
+    alert('Por favor, informe o motivo para prosseguir.');
+    return;
+  }
+  fecharModalJustificativaDistancia();
+  concluirEntregaAtual(justificativa);
 }
 
 // ==========================================
 // SUCESSO E FALHA
 // ==========================================
 
-async function concluirEntregaAtual() {
+async function concluirEntregaAtual(justificativaDistancia = null) {
   if (!currentEntrega) return;
   if (!confirm("Tem certeza que finalizou a entrega no cliente?")) return;
   
@@ -692,7 +727,8 @@ async function concluirEntregaAtual() {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        entrega_id: currentEntrega.id
+        entrega_id: currentEntrega.id,
+        justificativa_distancia: justificativaDistancia
       })
     });
     const data = await res.json();

@@ -1316,6 +1316,60 @@ def get_historico_rotas():
 
     return jsonify(historico)
 
+@app.route('/api/admin/gerar_codigo', methods=['POST'])
+@auth_required
+def gerar_codigo():
+    if request.user.get('role') != 'admin':
+        return jsonify({'error': 'Acesso negado'}), 403
+        
+    import random
+    import json
+    import time
+    
+    # Gera 6 dígitos aleatórios
+    codigo = str(random.randint(100000, 999999))
+    # Validade: 10 minutos (600 segundos)
+    expires_at = int(time.time()) + 600
+    
+    # Salva ou atualiza a config
+    config = Setting.query.get('override_code')
+    if not config:
+        config = Setting(key='override_code')
+        db_sql.session.add(config)
+        
+    config.value = json.dumps({'code': codigo, 'expires_at': expires_at})
+    db_sql.session.commit()
+    
+    return jsonify({'success': True, 'codigo': codigo})
+
+@app.route('/api/entregador/verificar_codigo', methods=['POST'])
+@auth_required
+def verificar_codigo():
+    import json
+    import time
+    
+    data = request.json
+    codigo_inserido = data.get('codigo')
+    
+    if not codigo_inserido:
+        return jsonify({'error': 'Código não fornecido'}), 400
+        
+    config = Setting.query.get('override_code')
+    if not config or not config.value:
+        return jsonify({'error': 'Nenhum código ativo no momento.'}), 400
+        
+    try:
+        dados = json.loads(config.value)
+        if int(time.time()) > dados.get('expires_at', 0):
+            return jsonify({'error': 'Este código expirou.'}), 400
+            
+        if codigo_inserido.strip() != dados.get('code'):
+            return jsonify({'error': 'Código incorreto.'}), 400
+            
+        return jsonify({'success': True})
+    except:
+        return jsonify({'error': 'Erro ao validar código interno.'}), 500
+
 @app.route('/api/entregador/concluir_entrega', methods=['POST'])
 @auth_required
 def concluir_entrega():
@@ -1324,6 +1378,7 @@ def concluir_entrega():
         
     data = request.json
     entrega_id = data.get('entrega_id')
+    justificativa_distancia = data.get('justificativa_distancia')
     
     entrega = Entrega.query.get(entrega_id)
     if not entrega:
@@ -1336,6 +1391,11 @@ def concluir_entrega():
         
     entrega.status = 'Entregue'
     entrega.finalizado_em = datetime.datetime.utcnow().isoformat()
+    if justificativa_distancia:
+        # Check if attribute exists in case the table hasn't been altered yet
+        if hasattr(entrega, 'justificativa_distancia'):
+            entrega.justificativa_distancia = justificativa_distancia
+            
     db_sql.session.commit()
     return jsonify({'success': True, 'status': entrega.status})
 
