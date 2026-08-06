@@ -1780,13 +1780,33 @@ async function startRecording() {
     source.connect(_recAnalyser);
 
     // Start MediaRecorder
-    const mimeType = MediaRecorder.isTypeSupported('audio/ogg; codecs=opus')
-      ? 'audio/ogg; codecs=opus'
-      : MediaRecorder.isTypeSupported('audio/webm; codecs=opus')
-        ? 'audio/webm; codecs=opus'
-        : 'audio/webm';
+    let options = {};
+    if (typeof MediaRecorder.isTypeSupported === 'function') {
+      if (MediaRecorder.isTypeSupported('audio/webm; codecs=opus')) {
+        options = { mimeType: 'audio/webm; codecs=opus' };
+      } else if (MediaRecorder.isTypeSupported('audio/ogg; codecs=opus')) {
+        options = { mimeType: 'audio/ogg; codecs=opus' };
+      } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+        options = { mimeType: 'audio/mp4' };
+      } else if (MediaRecorder.isTypeSupported('audio/aac')) {
+        options = { mimeType: 'audio/aac' };
+      }
+    }
 
-    _mediaRecorder = new MediaRecorder(stream, { mimeType });
+    try {
+      _mediaRecorder = new MediaRecorder(stream, options);
+    } catch (e) {
+      console.warn("Failed to create MediaRecorder with options, using default.", e);
+      _mediaRecorder = new MediaRecorder(stream); // Safari fallback
+    }
+    
+    // Safely get what the browser actually used
+    let actualMimeType = _mediaRecorder.mimeType;
+    if (!actualMimeType) {
+      // Safari sometimes leaves mimeType empty. If so, default to audio/mp4 for iOS.
+      actualMimeType = 'audio/mp4'; 
+    }
+    
     _audioChunks = [];
 
     _mediaRecorder.ondataavailable = (e) => {
@@ -1800,10 +1820,10 @@ async function startRecording() {
 
       if (_audioChunks.length === 0) return; // cancelled
 
-      const blob = new Blob(_audioChunks, { type: mimeType });
+      const blob = new Blob(_audioChunks, { type: actualMimeType });
       const reader = new FileReader();
       reader.onloadend = () => {
-        const base64 = reader.result; // data:audio/ogg;base64,...
+        const base64 = reader.result; // data:audio/mp4;base64,...
         sendAudioMessage(base64);
       };
       reader.readAsDataURL(blob);
