@@ -4618,9 +4618,9 @@ def stream_media(media_type):
     try:
         # ── 1. Verificar no MinIO (prioridade máxima) ──────────────────────────
         _ext_map = {
-            'image': ['.jpeg', '.jpg', '.png', ''],
-            'video': ['.mp4', ''],
-            'audio': ['.oga', '.ogg', ''],
+            'image': ['.jpeg', '.jpg', '.png', '.webp', ''],
+            'video': ['.mp4', '.webm_video', ''],
+            'audio': ['.oga', '.ogg', '.webm', '.mp4', '.mp3', '.m4a', '.aac', '.wav', ''],
             'document': ['.pdf', '.doc', '.docx', '.bin', '']
         }
         _exts = _ext_map.get(media_type, [''])
