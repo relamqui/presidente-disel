@@ -1208,14 +1208,12 @@ async function openChat(id) {
   
   // Header
   document.getElementById('chatName').textContent = contact.name;
-  document.getElementById('chatAvatar').textContent = contact.avatar || contact.name[0];
-  document.getElementById('chatAvatar').style.background = avatarColor(contact.name);
+  setAvatarEl(document.getElementById('chatAvatar'), contact.avatar, contact.name);
   document.getElementById('chatStatus').textContent = (contact.instanceName || contact.instance) + ' · Online';
   
   // Sidebar info
   document.getElementById('detailsName').textContent = contact.name;
-  document.getElementById('detailsAvatar').textContent = contact.avatar || contact.name[0];
-  document.getElementById('detailsAvatar').style.background = avatarColor(contact.name);
+  setAvatarEl(document.getElementById('detailsAvatar'), contact.avatar, contact.name);
   document.getElementById('detailsPhone').textContent = contact.phone;
   document.getElementById('detailsInstance').textContent = contact.instanceName || contact.instance;
 
@@ -2032,8 +2030,7 @@ async function sendAudioMessage(base64Data) {
 
 // ─── Contact Details Sidebar ──────────────────────────────────────────────────
 function updateContactDetails(contact) {
-  document.getElementById('detailsAvatar').textContent = contact.avatar;
-  document.getElementById('detailsAvatar').style.background = avatarColor(contact.name);
+  setAvatarEl(document.getElementById('detailsAvatar'), contact.avatar, contact.name);
   document.getElementById('detailsName').textContent = contact.name;
   document.getElementById('detailsPhone').textContent = contact.phone;
   document.getElementById('detailsInstance').textContent = contact.instanceName;
@@ -2863,9 +2860,9 @@ async function openChatMenu() {
         
         // Atualiza UI
         document.getElementById('chatName').textContent = updated.name;
-        document.getElementById('chatAvatar').textContent = updated.avatar;
+        setAvatarEl(document.getElementById('chatAvatar'), updated.avatar, updated.name);
         document.getElementById('detailsName').textContent = updated.name;
-        document.getElementById('detailsAvatar').textContent = updated.avatar;
+        setAvatarEl(document.getElementById('detailsAvatar'), updated.avatar, updated.name);
         
         renderChatList(getFilteredContacts());
         showToast('Nome atualizado com sucesso!');
@@ -3128,6 +3125,18 @@ function showToast(msg) {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+
+function setAvatarEl(el, avatar, name) {
+  if (!el) return;
+  const letter = (name || '?')[0].toUpperCase();
+  if (avatar && avatar.startsWith('http')) {
+    el.innerHTML = `<img src="${avatar}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;" alt="" onerror="this.parentElement.innerHTML='${letter}'; this.parentElement.style.background='${avatarColor(name||'?')}'">`;
+    el.style.background = 'transparent';
+  } else {
+    el.innerHTML = avatar || letter;
+    el.style.background = typeof avatarColor === 'function' ? avatarColor(name || '?') : '#ccc';
+  }
+}
 
 function avatarColor(name) {
   const colors = ['#0d7377','#005c4b','#1a237e','#4a148c','#880e4f','#3e2723','#006064'];
