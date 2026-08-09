@@ -290,7 +290,7 @@ function initSocket(token) {
           const avatarEl = document.getElementById('currentChatAvatar');
           if (avatarEl) {
             if (data.avatar.startsWith('http')) {
-              avatarEl.innerHTML = `<img src="${data.avatar}" alt="Avatar">`;
+              avatarEl.innerHTML = `<img src="${data.avatar}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;" alt="Avatar">`;
             } else {
               avatarEl.innerHTML = data.avatar;
             }
@@ -1091,7 +1091,7 @@ async function fetchWahaAvatar(c) {
           const avatarContainer = itemEl.querySelector('.chat-item-avatar');
           if (avatarContainer) {
             avatarContainer.style.background = 'transparent';
-            avatarContainer.innerHTML = `<img src="${c.avatar}" alt="" onerror="this.parentElement.textContent='${(c.name||'?')[0].toUpperCase()}'; this.parentElement.style.background=typeof avatarColor==='function'?avatarColor('${c.name||'?'}'):'#ccc';">`;
+            avatarContainer.innerHTML = `<img src="${c.avatar}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;" alt="" onerror="this.parentElement.textContent='${(c.name||'?')[0].toUpperCase()}'; this.parentElement.style.background=typeof avatarColor==='function'?avatarColor('${c.name||'?'}'):'#ccc';">`;
           }
         }
         
@@ -1152,7 +1152,7 @@ function renderChatList(contacts) {
 
     const displayName = c.name || c.phone || '?';
     const avatarHtml = (c.avatar && c.avatar.startsWith('http'))
-      ? `<img src="${c.avatar}" alt="" onerror="this.parentElement.textContent='${displayName.charAt(0).toUpperCase()}'">`
+      ? `<img src="${c.avatar}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;" alt="" onerror="this.parentElement.textContent='${displayName.charAt(0).toUpperCase()}'">`
       : (c.avatar || displayName.charAt(0).toUpperCase());
     const avatarBg = (c.avatar && c.avatar.startsWith('http')) ? 'transparent' : avatarColor(displayName);
 
