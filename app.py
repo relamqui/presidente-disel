@@ -249,14 +249,14 @@ class PushSubscription(db_sql.Model):
     endpoint = db_sql.Column(db_sql.Text, nullable=False, unique=True)
     p256dh = db_sql.Column(db_sql.String(255), nullable=False)
     auth = db_sql.Column(db_sql.String(255), nullable=False)
-    created_at = db_sql.Column(db_sql.DateTime, default=datetime.datetime.utcnow)
+    created_at = db_sql.Column(db_sql.DateTime, default=get_now)
 
 class DriverLocation(db_sql.Model):
     id = db_sql.Column(db_sql.Integer, primary_key=True)
     user_id = db_sql.Column(db_sql.Integer, db_sql.ForeignKey('user.id'), nullable=False, unique=True)
     lat = db_sql.Column(db_sql.Float, nullable=False)
     lng = db_sql.Column(db_sql.Float, nullable=False)
-    updated_at = db_sql.Column(db_sql.DateTime, default=datetime.datetime.utcnow)
+    updated_at = db_sql.Column(db_sql.DateTime, default=get_now)
     
     user = db_sql.relationship('User', backref=db_sql.backref('location', uselist=False))
 
@@ -281,7 +281,7 @@ class ContactRequest(db_sql.Model):
     setor = db_sql.Column(db_sql.String(150), nullable=True)
     reason = db_sql.Column(db_sql.Text, nullable=False)
     status = db_sql.Column(db_sql.String(20), default='PENDING') # PENDING, ANSWERED
-    created_at = db_sql.Column(db_sql.DateTime, default=datetime.datetime.utcnow)
+    created_at = db_sql.Column(db_sql.DateTime, default=get_now)
     is_first_time = db_sql.Column(db_sql.Boolean, default=True)
 
 class Message(db_sql.Model):
@@ -364,7 +364,7 @@ class Entrega(db_sql.Model):
     valor = db_sql.Column(db_sql.String(50), nullable=True)
     status = db_sql.Column(db_sql.String(50), default='Pronto para coleta')
     nome_atendente = db_sql.Column(db_sql.String(150), nullable=True)
-    criado_em = db_sql.Column(db_sql.DateTime, default=datetime.datetime.utcnow)
+    criado_em = db_sql.Column(db_sql.DateTime, default=get_now)
     codigo_verificacao = db_sql.Column(db_sql.String(20), nullable=True)
     entregador_id = db_sql.Column(db_sql.Integer, nullable=True)
     justificativa_falha = db_sql.Column(db_sql.Text, nullable=True)
@@ -993,7 +993,7 @@ def update_driver_location():
     else:
         loc.lat = lat
         loc.lng = lng
-        loc.updated_at = datetime.datetime.utcnow()
+        loc.updated_at = get_now()
         
     db_sql.session.commit()
     return jsonify({'success': True})
@@ -1005,7 +1005,7 @@ def get_drivers_locations():
         return jsonify({'error': 'Acesso negado'}), 403
         
     # Pega localizações que foram atualizadas nas últimas 2 horas
-    two_hours_ago = datetime.datetime.utcnow() - datetime.timedelta(hours=2)
+    two_hours_ago = get_now() - datetime.timedelta(hours=2)
     locations = DriverLocation.query.filter(DriverLocation.updated_at >= two_hours_ago).all()
     
     results = []
@@ -1186,7 +1186,7 @@ def falha_entrega():
         
     entrega.status = 'Falha na Entrega'
     entrega.justificativa_falha = justificativa
-    entrega.finalizado_em = datetime.datetime.utcnow().isoformat()
+    entrega.finalizado_em = get_now().isoformat()
     db_sql.session.commit()
     return jsonify({'success': True, 'status': entrega.status, 'justificativa_falha': entrega.justificativa_falha})
 
@@ -1390,7 +1390,7 @@ def concluir_entrega():
         return jsonify({'error': 'Você não tem permissão para concluir esta entrega'}), 403
         
     entrega.status = 'Entregue'
-    entrega.finalizado_em = datetime.datetime.utcnow().isoformat()
+    entrega.finalizado_em = get_now().isoformat()
     if justificativa_distancia:
         # Check if attribute exists in case the table hasn't been altered yet
         if hasattr(entrega, 'justificativa_distancia'):
@@ -1426,7 +1426,7 @@ def otimizar_rota():
         if entregas_ativas:
             max_rota = db_sql.session.query(db_sql.func.max(Entrega.numero_rota)).scalar() or 0
             novo_numero_rota = max_rota + 1
-            agora = datetime.datetime.utcnow().isoformat()
+            agora = get_now().isoformat()
             
             for e in entregas_ativas:
                 e.numero_rota = novo_numero_rota
