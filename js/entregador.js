@@ -645,7 +645,7 @@ function tentarConcluirEntrega() {
     
     const dist = getDistanceFromLatLonInMeters(latAtual, lngAtual, latDest, lngDest);
     
-    if (dist <= 150) {
+    if (dist <= 500) {
       // Perto o suficiente
       concluirEntregaAtual();
     } else {
