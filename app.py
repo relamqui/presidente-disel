@@ -2712,39 +2712,6 @@ def send_document():
             mime_part, doc_raw = doc_raw.split(';base64,', 1)
             mimetype = mime_part.replace('data:', '')
 
-        # --- Salvar localmente PRIMEIRO com um ID temporário para enviar via URL ao WAHA ---
-        import uuid, os, base64, re, jwt, shutil
-        temp_id = f"temp_{uuid.uuid4().hex}"
-        media_dir = os.path.join(DATA_DIR, 'media')
-        os.makedirs(media_dir, exist_ok=True)
-        
-        _, file_ext = os.path.splitext(doc_name)
-        if not file_ext:
-            if 'application/pdf' in mimetype: file_ext = '.pdf'
-            elif 'application/zip' in mimetype: file_ext = '.zip'
-            elif 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' in mimetype: file_ext = '.docx'
-            elif 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' in mimetype: file_ext = '.xlsx'
-            elif 'text/plain' in mimetype: file_ext = '.txt'
-            else: file_ext = '.bin'
-            
-        clean_b64 = re.sub(r'[^A-Za-z0-9+/]', '', doc_raw)
-        pad_raw = clean_b64 + "=" * ((4 - len(clean_b64) % 4) % 4)
-        
-        temp_path = os.path.join(media_dir, temp_id + file_ext)
-        try:
-            with open(temp_path, 'wb') as f:
-                f.write(base64.b64decode(pad_raw))
-        except Exception as e:
-            print(f"[Send Document] Erro b64decode/save: {e}")
-            return jsonify({'error': 'Erro ao processar arquivo base64'}), 400
-
-        # Gerar URL pública usando o nosso próprio stream_media
-        temp_token = jwt.encode({"id": 1, "role": "admin"}, JWT_SECRET, algorithm="HS256")
-        host = request.headers.get('X-Forwarded-Host', request.headers.get('Host', 'localhost'))
-        scheme = request.headers.get('X-Forwarded-Proto', 'https')
-        base_url = f"{scheme}://{host}"
-        doc_url = f"{base_url}/api/media/document?instance={inst}&msg_id={temp_id}&token={temp_token}"
-
         url = f"{WAHA_API_URL}/api/sendFile"
         payload = {
             "session": inst,
@@ -2753,10 +2720,10 @@ def send_document():
             "file": {
                 "mimetype": mimetype,
                 "filename": doc_name,
-                "url": doc_url
+                "data": doc_raw
             }
         }
-        print(f"[Send Document] Enviando para WAHA via URL: {doc_url}")
+        print(f"[Send Document] Enviando para WAHA via data (base64)")
         res = waha_post_with_fallback(url, payload, headers=get_waha_headers(), timeout=60)
         try:
             res_data = res.json()
@@ -2765,19 +2732,26 @@ def send_document():
 
         msg_id = extract_waha_msg_id(res_data, f"doc_out_{int(now.timestamp())}")
         
-        # --- Upload to MinIO ---
+        # --- UPLOAD TO MINIO ---
         try:
+            import base64, re, os
+            clean_b64 = re.sub(r'[^A-Za-z0-9+/]', '', doc_raw)
+            pad_raw = clean_b64 + "=" * ((4 - len(clean_b64) % 4) % 4)
             short_id = msg_id.split('_')[-1]
-            # Read the temp file bytes to upload to minio
-            with open(temp_path, 'rb') as f:
-                file_bytes = f.read()
+            
+            _, file_ext = os.path.splitext(doc_name)
+            if not file_ext:
+                if 'application/pdf' in mimetype: file_ext = '.pdf'
+                elif 'application/zip' in mimetype: file_ext = '.zip'
+                elif 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' in mimetype: file_ext = '.docx'
+                elif 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' in mimetype: file_ext = '.xlsx'
+                elif 'text/plain' in mimetype: file_ext = '.txt'
+                else: file_ext = '.bin'
                 
+            file_bytes = base64.b64decode(pad_raw)
             minio_upload(file_bytes, msg_id + file_ext, mimetype)
             if msg_id != short_id:
                 minio_upload(file_bytes, short_id + file_ext, mimetype)
-            
-            # Remove temp file
-            os.remove(temp_path)
         except Exception as e:
             print(f"[Send Document] Erro ao fazer upload no MinIO: {e}")
         # -------------------------
