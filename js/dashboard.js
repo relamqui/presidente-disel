@@ -467,6 +467,14 @@ function handleIncomingWebhook(data) {
     // Ensure messages array exists
     if (!contact.messages) contact.messages = [];
     
+    // Se for eco do nosso próprio envio via PC, substitui o ID otimista pelo real
+    if (data._client_msg_id) {
+        const optMsg = contact.messages.find(m => m.id === data._client_msg_id);
+        if (optMsg) {
+            optMsg.id = newMsg.id; // Atualiza ID falso ('temp_...') para o real do WAHA
+        }
+    }
+    
     // Check for duplicates before pushing
     let isDuplicate = false;
     if (contact.messages.find(m => m.id === newMsg.id)) {
@@ -1643,7 +1651,8 @@ async function sendMessage() {
         instance: targetInstance,
         number: cleanNumber,
         text: textToSend,  // Envia com o prefixo *Nome:*
-        reply_to: window.replyingToMsgId || null
+        reply_to: window.replyingToMsgId || null,
+        client_msg_id: tempId
       })
     });
 

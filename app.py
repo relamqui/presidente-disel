@@ -2448,6 +2448,7 @@ def send_message():
             print(f"Erro webhook corpal (send): {corpal_e}")
 
         # --- Emitir evento socket para sincronizar com outros atendentes/telas ---
+        client_msg_id = data.get('client_msg_id')
         fake_event = {
             'event': 'send.message',
             'instance': inst,
@@ -2455,10 +2456,17 @@ def send_message():
                 'key': {'remoteJid': f"{number}@s.whatsapp.net", 'fromMe': True, 'id': msg_id},
                 'message': {'conversation': text}
             },
-            '_processed_text': text
+            '_processed_text': text,
+            '_client_msg_id': client_msg_id
         }
         socketio.emit('whatsapp_event', fake_event, room=f'instance_{inst}')
         socketio.emit('whatsapp_event', fake_event, room='admin')
+
+        # Garantir que o frontend receba o ID normalizado
+        if 'id' in res_data and isinstance(res_data['id'], str):
+            res_data['id'] = msg_id
+        if 'key' in res_data and isinstance(res_data['key'], dict) and 'id' in res_data['key']:
+            res_data['key']['id'] = msg_id
 
         return jsonify(res_data)
     except Exception as e:
