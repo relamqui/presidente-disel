@@ -2713,13 +2713,31 @@ async function assignChat() {
   }
 }
 
-async function releaseChat() {
+function releaseChat() {
   if (!currentChat) return;
+  document.getElementById('motivoModal').style.display = 'flex';
+  document.getElementById('motivoDetalhes').value = '';
+}
+
+function closeMotivoModal() {
+  document.getElementById('motivoModal').style.display = 'none';
+}
+
+async function confirmReleaseChat() {
+  if (!currentChat) return;
+  
+  const motivo = document.querySelector('input[name="motivoFinalizacao"]:checked').value;
+  const detalhes = document.getElementById('motivoDetalhes').value;
+  
   const token = localStorage.getItem('wp_crm_token');
   try {
     const res = await fetch(`${API_URL}/api/contacts/${currentChat.id}/release`, {
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${token}` }
+      headers: { 
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ motivo, detalhes })
     });
     const data = await res.json();
     if (res.ok) {
@@ -2730,6 +2748,7 @@ async function releaseChat() {
       updateContactDetails(currentChat);
       renderChatList(getFilteredContacts());
       showToast('Atendimento finalizado!');
+      closeMotivoModal();
     } else {
       showToast(data.error || 'Erro ao finalizar');
     }

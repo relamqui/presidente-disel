@@ -383,6 +383,16 @@ class NPSVotos(db_sql.Model):
     setor = db_sql.Column(db_sql.String(150))
     timestamp = db_sql.Column(db_sql.DateTime, default=get_now)
 
+class MotivoFinalizacao(db_sql.Model):
+    __tablename__ = 'motivo_finalizacao'
+    id             = db_sql.Column(db_sql.Integer, primary_key=True, autoincrement=True)
+    contact_id     = db_sql.Column(db_sql.String(150), nullable=True)
+    numero_cliente = db_sql.Column(db_sql.String(50), nullable=True)
+    atendente      = db_sql.Column(db_sql.String(150), nullable=True)
+    motivo         = db_sql.Column(db_sql.String(50), nullable=True)   # 'Venda', 'Orçamento', ou outro texto
+    detalhes       = db_sql.Column(db_sql.Text, nullable=True)
+    criado_em      = db_sql.Column(db_sql.DateTime, nullable=True, default=get_now)
+
 class Entrega(db_sql.Model):
     id = db_sql.Column(db_sql.Integer, primary_key=True)
     nome_peca = db_sql.Column(db_sql.String(150), nullable=False)
@@ -663,7 +673,25 @@ def migrate_to_sql():
         except Exception as e_nps:
             db_sql.session.rollback()
             print(f"[MIGRATE] nps_votos: {e_nps}")
-            
+
+        try:
+            db_sql.session.execute(db_sql.text("""
+                CREATE TABLE IF NOT EXISTS motivo_finalizacao (
+                    id SERIAL PRIMARY KEY,
+                    contact_id VARCHAR(150),
+                    numero_cliente VARCHAR(50),
+                    atendente VARCHAR(150),
+                    motivo VARCHAR(50),
+                    detalhes TEXT,
+                    criado_em TIMESTAMP DEFAULT NOW()
+                )
+            """))
+            db_sql.session.commit()
+            print("[MIGRATE] Tabela motivo_finalizacao verificada/criada.")
+        except Exception as e_mf:
+            db_sql.session.rollback()
+            print(f"[MIGRATE] motivo_finalizacao: {e_mf}")
+
         try:
             velhas = Entrega.query.filter(
                 Entrega.entregador_id.isnot(None),
@@ -3611,6 +3639,16 @@ def webhook():
                 db_sql.session.flush()
                 # Chama a busca de foto
                 fetch_and_update_avatar_async(contact_id, phone, instance)
+                # Inicia contagem de tempo de espera para novo contato (se não enviado por nós)
+                if not fromMe:
+                    try:
+                        te_aberto = TempoEspera.query.filter_by(numero_cliente=phone).filter(TempoEspera.atendido == None).first()
+                        if not te_aberto:
+                            novo_te = TempoEspera(numero_cliente=phone, inicio=get_now())
+                            db_sql.session.add(novo_te)
+                            db_sql.session.flush()
+                    except Exception as e_te_new:
+                        print(f"[TempoEspera] Erro ao criar registro (novo contato): {e_te_new}")
             else:
                 contact.last_msg = text
                 contact.last_msg_time = time_str
@@ -3620,6 +3658,15 @@ def webhook():
                         tags = list(contact.tags or [])
                         if 'Não Lido' not in tags:
                             tags.append('Não Lido')
+                            # Inicia/reinicia contagem de tempo de espera
+                            try:
+                                te_aberto = TempoEspera.query.filter_by(numero_cliente=phone).filter(TempoEspera.atendido == None).first()
+                                if not te_aberto:
+                                    novo_te = TempoEspera(numero_cliente=phone, inicio=get_now())
+                                    db_sql.session.add(novo_te)
+                                    db_sql.session.flush()
+                            except Exception as e_te_ex:
+                                print(f"[TempoEspera] Erro ao criar registro (contato existente): {e_te_ex}")
                         contact.tags = tags
                         flag_modified(contact, 'tags')
                     
@@ -3630,6 +3677,7 @@ def webhook():
             db_sql.session.flush()
 
             # Save Message
+
             msg_id = key.get('id')
             if not Message.query.get(msg_id):
                 new_msg = Message(
@@ -4109,6 +4157,25 @@ def assign_chat(id):
     
     track_sla_event(contact.phone, atendente=user.name, event_type='ASSIGNED')
     
+    # Atualiza o registro de TempoEspera para marcar o momento do atendimento
+    try:
+        te_aberto = TempoEspera.query.filter_by(numero_cliente=contact.phone).filter(TempoEspera.atendido == None).order_by(TempoEspera.id.desc()).first()
+        if te_aberto:
+            te_aberto.atendido = get_now()
+            te_aberto.nome_atendente = user.name
+            sf = ""
+            if user.setor and user.filial:
+                sf = f"{user.setor}:{user.filial}"
+            elif user.setor:
+                sf = user.setor
+            elif user.filial:
+                sf = user.filial
+            te_aberto.setor_filial = sf
+            db_sql.session.commit()
+    except Exception as e_te:
+        db_sql.session.rollback()
+        print(f"[TempoEspera] Erro ao atualizar no assign: {e_te}")
+    
     # Corpal Webhook — evento atender
     now = get_now()
     _filial_a = None
@@ -4237,10 +4304,35 @@ def release_chat(id):
     contact.tags = preserved_tags
     flag_modified(contact, 'tags')
     
+    # Lê motivo e detalhes do payload JSON
+    data = request.get_json(silent=True) or {}
+    motivo = data.get('motivo')
+    detalhes = data.get('detalhes', '')
+
+    if motivo:
+        novo_motivo = MotivoFinalizacao(
+            contact_id=contact.id,
+            numero_cliente=contact.phone,
+            atendente=old_name,
+            motivo=motivo,
+            detalhes=detalhes
+        )
+        db_sql.session.add(novo_motivo)
+    
     db_sql.session.commit()
     
     # Registra no SLA que o atendimento foi finalizado
     track_sla_event(contact.phone, event_type='RELEASED')
+    
+    # Atualiza registro de TempoEspera marcando como finalizado
+    try:
+        te_aberto = TempoEspera.query.filter_by(numero_cliente=contact.phone).filter(TempoEspera.finalizado == None).order_by(TempoEspera.id.desc()).first()
+        if te_aberto:
+            te_aberto.finalizado = get_now()
+            db_sql.session.commit()
+    except Exception as e_te:
+        db_sql.session.rollback()
+        print(f"[TempoEspera] Erro ao finalizar no release: {e_te}")
     
     # Dispara Webhook NPS para o N8N
     try:

@@ -42,6 +42,7 @@
     .main-tab-btn.nps.active    { color:var(--text-primary); border-bottom-color:var(--green); }
     .main-tab-btn.tempo.active  { color:var(--text-primary); border-bottom-color:var(--cyan); }
     .main-tab-btn.volume.active { color:var(--text-primary); border-bottom-color:var(--purple); }
+    .main-tab-btn.motivos.active { color:var(--text-primary); border-bottom-color:var(--yellow); }
     .main-tab-content { display:none; }
     .main-tab-content.active { display:block; }
 
@@ -50,6 +51,7 @@
     .sub-tab-btn.active-nps   { background:linear-gradient(135deg,#00c896,#00a87a); color:white; font-weight:700; }
     .sub-tab-btn.active-tempo { background:linear-gradient(135deg,#00c8e0,#0098b0); color:white; font-weight:700; }
     .sub-tab-btn.active-volume{ background:linear-gradient(135deg,#9b59b6,#8e44ad); color:white; font-weight:700; }
+    .sub-tab-btn.active-motivos{ background:linear-gradient(135deg,#f5a623,#e67e22); color:white; font-weight:700; }
     .sub-tab-content { display:none; }
     .sub-tab-content.active { display:block; }
     .sub-content { display:none; }
@@ -200,6 +202,7 @@
   <div class="main-tabs">
     <button class="main-tab-btn nps active" id="main-tab-nps" onclick="switchMain('nps')">📦 Relatório de Entregas</button>
     <button class="main-tab-btn tempo" id="main-tab-tempo" onclick="switchMain('tempo')">⏱️ Tempo de Espera</button>
+    <button class="main-tab-btn motivos" id="main-tab-motivos" onclick="switchMain('motivos')">📋 Motivos de Finalização</button>
   </div>
 
     <!-- MOTIVOS -->
@@ -240,6 +243,35 @@
   </div>
 
 </div>
+
+<!-- MOTIVOS DE FINALIZACAO -->
+  <div class="main-tab-content" id="main-content-motivos">
+    <div class="sub-tabs">
+      <button class="sub-tab-btn active-motivos" id="motivos-sub-geral" onclick="switchSub('motivos','geral')">📊 Gráfico Geral</button>
+      <button class="sub-tab-btn" id="motivos-sub-atendentes" onclick="switchSub('motivos','atendentes')">🧑‍💼 Ranking Atendentes</button>
+      <button class="sub-tab-btn" id="motivos-sub-chats" onclick="switchSub('motivos','chats')">💬 Chats Individuais</button>
+    </div>
+
+    <div class="sub-content active" id="motivos-content-geral">
+      <div class="chart-card fade-in" id="nps-geral-box" style="min-height:300px">
+        <div class="spinner nps-spin"></div>
+      </div>
+    </div>
+    
+    <div class="sub-content" id="motivos-content-atendentes">
+      <div class="chart-card fade-in" id="nps-atendentes-box" style="min-height:300px">
+        <div class="spinner nps-spin"></div>
+      </div>
+    </div>
+    
+    <div class="sub-content" id="motivos-content-chats">
+      <div class="chart-card fade-in" id="nps-individuais-box" style="min-height:300px">
+        <div class="spinner nps-spin"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
 <script>
   const API = window.location.origin;
   const tok = () => localStorage.getItem('wp_crm_token');
@@ -277,9 +309,29 @@
     } else if (sec === 'tempo') {
       if (sub === 'filiais') loadTeF();
       else if (sub === 'atendentes') loadTeA();
+    } else if (sec === 'motivos') {
+      if (sub === 'geral') loadMotivosGeral();
+      else if (sub === 'atendentes') loadNpsA();
+      else if (sub === 'chats') loadMotivosIndividuais();
     }
   }
   function tog(id) { document.getElementById(id).classList.toggle('open'); }
+
+  function loadAll() {
+    // NPS Tab (Entregas)
+    if (curSubNps === 'rotas') loadRotas();
+    else if (curSubNps === 'individuais') loadIndividuais();
+    else if (curSubNps === 'metricas') loadMetricas();
+    
+    // Tempo Tab
+    loadTeF();
+    loadTeA();
+    
+    // Motivos Tab
+    loadMotivosGeral();
+    loadNpsA();
+    loadMotivosIndividuais();
+  }
 
   function qp(extra) {
     const s = document.getElementById('filterStart').value, e = document.getElementById('filterEnd').value;
@@ -289,11 +341,6 @@
     return p.toString() ? '?'+p.toString() : '';
   }
 
-  function loadAll() {
-    loadRotas();
-    loadTeF();
-    loadTeA();
-  }
 
   const fmtDt = (s) => {
     if (!s) return '-';

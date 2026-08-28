@@ -637,6 +637,46 @@
   </div>
 </div>
 
+<!-- Modal Motivo Finalizacao -->
+<div class="modal-overlay" id="motivoModal" style="display:none" onclick="closeMotivoModal()">
+  <div class="modal-box" style="width: 400px; max-width: 95vw;" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h3>📋 Finalizar Atendimento</h3>
+      <button class="icon-btn" onclick="closeMotivoModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div style="padding: 20px;">
+      <p style="margin-bottom:15px;color:var(--text-muted);font-size:14px;">Como foi este atendimento?</p>
+      
+      <div style="display:flex; flex-direction:column; gap:10px; margin-bottom: 20px;">
+        <label style="display:flex; align-items:center; gap:10px; cursor:pointer; padding:10px; border:1px solid #3b4a54; border-radius:8px; background:#2a3942;">
+          <input type="radio" name="motivoFinalizacao" value="Venda" checked style="accent-color:#00a884; width:18px; height:18px;">
+          <span style="color:white; font-size:15px;">💰 Venda</span>
+        </label>
+        <label style="display:flex; align-items:center; gap:10px; cursor:pointer; padding:10px; border:1px solid #3b4a54; border-radius:8px; background:#2a3942;">
+          <input type="radio" name="motivoFinalizacao" value="Orçamento" style="accent-color:#00a884; width:18px; height:18px;">
+          <span style="color:white; font-size:15px;">📝 Orçamento</span>
+        </label>
+        <label style="display:flex; align-items:center; gap:10px; cursor:pointer; padding:10px; border:1px solid #3b4a54; border-radius:8px; background:#2a3942;">
+          <input type="radio" name="motivoFinalizacao" value="Outro" style="accent-color:#00a884; width:18px; height:18px;">
+          <span style="color:white; font-size:15px;">❓ Outro</span>
+        </label>
+      </div>
+
+      <div style="margin-bottom: 20px;">
+        <label style="display:block; margin-bottom:8px; color:var(--text-muted); font-size:13px;">Detalhes (opcional):</label>
+        <textarea id="motivoDetalhes" rows="3" style="width:100%; padding:10px; background:#2a3942; border:1px solid #3b4a54; border-radius:8px; color:white; outline:none; resize:none;" placeholder="Descreva brevemente..."></textarea>
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:12px;">
+        <button onclick="closeMotivoModal()" style="padding:10px 16px; border-radius:8px; border:1px solid #3b4a54; background:transparent; color:white; cursor:pointer;">Cancelar</button>
+        <button onclick="confirmReleaseChat()" style="padding:10px 16px; border-radius:8px; border:none; background:#00a884; color:white; cursor:pointer; font-weight:600;">✅ Finalizar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Modal Cortar Imagem -->
 <div class="modal-overlay" id="imageCropModal" style="display:none" onclick="closeImageCropModal()">
   <div class="modal-box" style="width: 800px; max-width: 95vw;" onclick="event.stopPropagation()">
