@@ -5467,6 +5467,94 @@ def report_tempo_espera_atendentes():
         return jsonify({'success': False, 'error': str(e), 'trace': traceback.format_exc()}), 500
 
 
+@app.route('/api/reports/tempo-espera-chats', methods=['GET'])
+@auth_required
+@admin_or_gestor_required
+def report_tempo_espera_chats():
+    try:
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+        page = int(request.args.get('page', 1))
+        limit = int(request.args.get('limit', 50))
+        offset = (page - 1) * limit
+
+        filters = ""
+        params = {}
+        if start_date:
+            filters += " AND inicio >= :start_date"
+            params['start_date'] = start_date
+        if end_date:
+            filters += " AND inicio <= :end_date"
+            params['end_date'] = end_date + ' 23:59:59'
+
+        count_sql = db_sql.text(f"SELECT COUNT(*) FROM tempo_espera WHERE 1=1 {filters}")
+        total_items = db_sql.session.execute(count_sql, params).scalar()
+
+        sql = db_sql.text(f"""
+            SELECT numero_cliente, nome_atendente, inicio, atendido, finalizado
+            FROM tempo_espera
+            WHERE 1=1 {filters}
+            ORDER BY inicio DESC
+            LIMIT :limit OFFSET :offset
+        """)
+        params['limit'] = limit
+        params['offset'] = offset
+
+        rows = db_sql.session.execute(sql, params).fetchall()
+
+        def fmt(secs):
+            s = int(secs)
+            if s < 60: return f"{s}s"
+            m = s // 60
+            sec = s % 60
+            if m < 60: return f"{m}m {sec}s"
+            h = m // 60
+            m = m % 60
+            return f"{h}h {m}m"
+
+        data = []
+        import datetime as dt
+        for r in rows:
+            cliente = r[0]
+            atendente = r[1] or "Sem Atendente"
+            inicio = r[2]
+            atendido = r[3]
+            finalizado = r[4]
+
+            if isinstance(inicio, str):
+                inicio = dt.datetime.strptime(inicio, '%Y-%m-%d %H:%M:%S.%f') if '.' in inicio else dt.datetime.strptime(inicio, '%Y-%m-%d %H:%M:%S')
+            if atendido and isinstance(atendido, str):
+                atendido = dt.datetime.strptime(atendido, '%Y-%m-%d %H:%M:%S.%f') if '.' in atendido else dt.datetime.strptime(atendido, '%Y-%m-%d %H:%M:%S')
+            if finalizado and isinstance(finalizado, str):
+                finalizado = dt.datetime.strptime(finalizado, '%Y-%m-%d %H:%M:%S.%f') if '.' in finalizado else dt.datetime.strptime(finalizado, '%Y-%m-%d %H:%M:%S')
+
+            str_espera = "Aguardando"
+            if atendido:
+                diff_espera = (atendido - inicio).total_seconds()
+                str_espera = fmt(diff_espera)
+
+            str_conversa = "-"
+            if atendido:
+                if finalizado:
+                    diff_conv = (finalizado - atendido).total_seconds()
+                    str_conversa = fmt(diff_conv)
+                else:
+                    str_conversa = "Em atendimento"
+
+            data.append({
+                'cliente': cliente,
+                'atendente': atendente,
+                'data_hora': inicio.strftime('%d/%m/%Y %H:%M'),
+                'espera': str_espera,
+                'conversa': str_conversa
+            })
+
+        return jsonify({'success': True, 'data': data, 'total': total_items, 'pages': (total_items + limit - 1) // limit})
+    except Exception as e:
+        import traceback
+        return jsonify({'success': False, 'error': str(e), 'trace': traceback.format_exc()}), 500
+
+
 @app.route('/api/reports/tempo-espera-filiais', methods=['GET'])
 @auth_required
 @admin_or_gestor_required

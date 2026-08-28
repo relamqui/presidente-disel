@@ -235,10 +235,10 @@
 <!-- TEMPO -->
   <div class="main-tab-content" id="main-content-tempo">
     <div class="sub-tabs">
-      <button class="sub-tab-btn active-tempo" id="tempo-sub-filiais" onclick="switchSub('tempo','filiais')">🏢 Por Filial / Setor</button>
+      <button class="sub-tab-btn active-tempo" id="tempo-sub-chats" onclick="switchSub('tempo','chats')">💬 Chat Individual</button>
       <button class="sub-tab-btn" id="tempo-sub-atendentes" onclick="switchSub('tempo','atendentes')">🏆 Ranking Atendentes</button>
     </div>
-    <div class="sub-tab-content active" id="tempo-content-filiais"><div id="tempo-filiais-box"><div class="spinner tempo-spin"></div></div></div>
+    <div class="sub-tab-content active" id="tempo-content-chats"><div id="tempo-chats-box"><div class="spinner tempo-spin"></div></div></div>
     <div class="sub-tab-content" id="tempo-content-atendentes"><div id="tempo-atendentes-box"><div class="spinner tempo-spin"></div></div></div>
   </div>
 <!-- MOTIVOS DE FINALIZACAO -->
@@ -304,7 +304,7 @@
       else if (sub === 'individuais') loadIndividuais();
       else if (sub === 'metricas') loadMetricas();
     } else if (sec === 'tempo') {
-      if (sub === 'filiais') loadTeF();
+      if (sub === 'chats') loadTeC();
       else if (sub === 'atendentes') loadTeA();
     } else if (sec === 'motivos') {
       if (sub === 'geral') loadMotivosGeral();
@@ -321,7 +321,7 @@
     else if (curSubNps === 'metricas') loadMetricas();
     
     // Tempo Tab
-    loadTeF();
+    loadTeC();
     loadTeA();
     
     // Motivos Tab
@@ -655,38 +655,34 @@
     return `<div class="pagination"><span class="pagination-info">Mostrando ${start}–${end} de ${total} registros</span><div class="pagination-btns">${btns}</div></div>`;
   }
 
-  /* ══ TEMPO FILIAIS ══ */
-  async function loadTeF() {
-    const el = document.getElementById('tempo-filiais-box');
+  /* ══ TEMPO: CHATS INDIVIDUAIS ══ */
+  let curPageTeC = 1;
+  async function loadTeC(page) {
+    if(page) curPageTeC = page;
+    const el = document.getElementById('tempo-chats-box');
     el.innerHTML = '<div class="spinner tempo-spin"></div>';
     try {
-      const r = await fetch(API+'/api/reports/tempo-espera-filiais'+qp(), {headers:{Authorization:'Bearer '+tok()}});
+      const r = await fetch(API+'/api/reports/tempo-espera-chats'+qp({page:curPageTeC}), {headers:{Authorization:'Bearer '+tok()}});
       const j = await r.json();
       if(!r.ok||!j.success){el.innerHTML=errH(j.error||'Erro');return;}
       const d = j.data||[];
-      if(!d.length){el.innerHTML=empH('Nenhum registro encontrado.');return;}
-      const allSc = d.map(f=>f.score);
-      el.innerHTML = d.map((f,fi)=>{
-        const cls = scC(f.score,allSc);
-        const setSc = f.setores.map(s=>s.score);
-        const setoresHtml = f.setores.map(s=>{
-          const sc=scC(s.score,setSc);
-          return '<div class="setor-card"><div class="setor-card-header"><div><div class="setor-name">'+s.setor+'</div><div class="setor-meta">'+s.total_atendidos+' atendimento(s)</div></div>'
-            +'<div class="score-badge '+sc+'"><span class="sv">'+s.score+'</span><span class="sl">Score</span></div></div>'
-            +'<div class="tempo-row"><span class="tempo-label">⏳ Espera média</span><span class="tempo-value '+spC(s.avg_espera_seg)+'">'+fmtS(s.avg_espera_seg)+'</span></div>'
-            +'<div class="tempo-row"><span class="tempo-label">💬 Chat médio</span><span class="tempo-value '+spC(s.avg_chat_seg)+'">'+fmtS(s.avg_chat_seg)+'</span></div>'
-            +'<div class="tempo-row"><span class="tempo-label">⚡ Total médio</span><span class="tempo-value '+spC(s.avg_total_seg)+'">'+fmtS(s.avg_total_seg)+'</span></div>'
-            +'</div>';
-        }).join('');
-        return '<div class="filial-block" id="tf'+fi+'">'
-          +'<div class="filial-header" onclick="tog(\'tf'+fi+'\')">'
-          +'<div class="filial-header-left"><div class="filial-icon ti">🏢</div><div><div class="filial-name">'+f.filial+'</div><div class="filial-meta">'+f.setores.length+' setor(es) · '+f.total_atendidos+' atendimentos</div></div></div>'
-          +'<div class="filial-header-right">'
-          +'<div class="stat-inline"><div class="stat-val tempo-value '+spC(f.avg_espera_seg)+'">⏳ '+fmtS(f.avg_espera_seg)+'</div><div class="stat-lbl">Espera média</div></div>'
-          +'<div class="stat-inline"><div class="stat-val tempo-value '+spC(f.avg_chat_seg)+'">💬 '+fmtS(f.avg_chat_seg)+'</div><div class="stat-lbl">Chat médio</div></div>'
-          +'<div class="score-badge '+cls+'"><span class="sv">'+f.score+'</span><span class="sl">Score</span></div>'+chv()+'</div></div>'
-          +'<div class="filial-body"><div class="setores-grid">'+setoresHtml+'</div></div></div>';
-      }).join('');
+      if(!d.length){el.innerHTML=empH('Nenhum chat registrado no período.');return;}
+      
+      let html = '<div class="ranking-table-wrap"><table class="rtable"><thead><tr>'
+        +'<th>Cliente</th><th>Atendente</th><th>Data / Hora</th><th>Espera</th><th>Atendimento</th>'
+        +'</tr></thead><tbody>'+d.map(r=>'<tr>'
+          +'<td style="font-weight:600">'+r.cliente+'</td>'
+          +'<td>'+r.atendente+'</td>'
+          +'<td style="color:var(--text-secondary)">'+r.data_hora+'</td>'
+          +'<td><span class="pill neut" style="color:var(--yellow)">⏳ '+r.espera+'</span></td>'
+          +'<td><span class="pill prom" style="color:var(--cyan)">'+(r.conversa==='Em atendimento'?'🔄 ':'💬 ')+r.conversa+'</span></td>'
+          +'</tr>').join('')
+        +'</tbody></table></div>';
+      
+      if(j.pages > 1) {
+        html += renderPagination(curPageTeC, j.pages, j.total, 'loadTeC');
+      }
+      el.innerHTML = html;
     } catch(e){el.innerHTML=errH('Erro de conexão.');}
   }
 
