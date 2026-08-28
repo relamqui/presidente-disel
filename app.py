@@ -2289,20 +2289,20 @@ def auto_assign_chat_to_sender(contact, user_data):
     agora_iso = get_now().isoformat()
     atend = AtendimentoChat.query.filter_by(numero=contact.phone).first()
     if atend:
-        atend.atendente = user_email
+        atend.atendente = user_name
         atend.status = 'atendente'
-        atend.ultimo_atendente = user_email
+        atend.ultimo_atendente = user_name
         atend.registro_time_chat = agora_iso
         atend.atendente_desde = agora_iso
     else:
-        atend = AtendimentoChat(numero=contact.phone, status='atendente', atendente=user_email, ultimo_atendente=user_email, registro_time_chat=agora_iso, atendente_desde=agora_iso)
+        atend = AtendimentoChat(numero=contact.phone, status='atendente', atendente=user_name, ultimo_atendente=user_name, registro_time_chat=agora_iso, atendente_desde=agora_iso)
         db_sql.session.add(atend)
 
     # Dispara evento socket para atualizar interface
     socketio.emit('chat_assignment', {
         'contact_id': contact.id,
         'assigned_to': user_data.get('id'),
-        'assigned_name': user_email,
+        'assigned_name': user_name,
         'tags': tags
     })
 
@@ -2443,6 +2443,20 @@ def send_message():
             requests.post(CORPAL_WEBHOOK_URL, json=corpal_payload, timeout=5)
         except Exception as corpal_e:
             print(f"Erro webhook corpal (send): {corpal_e}")
+
+        # --- Emitir evento socket para sincronizar com outros atendentes/telas ---
+        fake_event = {
+            'event': 'send.message',
+            'instance': inst,
+            'data': {
+                'key': {'remoteJid': f"{number}@s.whatsapp.net", 'fromMe': True, 'id': msg_id},
+                'message': {'conversation': text}
+            },
+            '_processed_text': text
+        }
+        socketio.emit('whatsapp_event', fake_event, room=f'instance_{inst}')
+        socketio.emit('whatsapp_event', fake_event, room='admin')
+
         return jsonify(res_data)
     except Exception as e:
         print(f"Erro ao enviar: {str(e)}")
@@ -3239,6 +3253,10 @@ def webhook():
             waha_event = data.get('event')
             session = data.get('session')
             payload = data.get('payload', {})
+            _fm = payload.get('fromMe', False)
+            _from = payload.get('from', '')
+            _to = payload.get('to', '')
+            print(f"[Webhook] event={waha_event} session={session} fromMe={_fm} from={_from!r} to={_to!r} id={payload.get('id','')!r}")
             
             if waha_event == 'message.ack':
                 ack_val = payload.get('ack', 0)
@@ -3455,9 +3473,29 @@ def webhook():
             # -------------------------------------------------------
 
             # --- Normalizar JID para 12 dígitos ---
-            raw_jid = waha_to if fromMe else waha_from
+            # Quando fromMe=True (celular do atendente), o campo 'to' pode vir vazio
+            # no evento message.any. Usar múltiplos fallbacks para garantir que
+            # a mensagem não seja descartada.
+            if fromMe:
+                raw_jid = (
+                    waha_to or
+                    payload.get('_data', {}).get('key', {}).get('remoteJid', '') or
+                    payload.get('_data', {}).get('to', '') or
+                    waha_from or ''
+                )
+            else:
+                raw_jid = (
+                    waha_from or
+                    payload.get('_data', {}).get('key', {}).get('remoteJid', '') or ''
+                )
+            
+            if not raw_jid:
+                print(f"[Webhook] fromMe={fromMe} - JID vazio, payload.from={waha_from!r} payload.to={waha_to!r} - ignorando")
+                return 'OK', 200
+
             norm_phone = normalize_br_phone(raw_jid)
             final_jid = f"{norm_phone}@s.whatsapp.net" if norm_phone else raw_jid
+            print(f"[Webhook] fromMe={fromMe} waha_from={waha_from!r} waha_to={waha_to!r} -> final_jid={final_jid!r}")
             # ----------------------------------------
             
             evo_data = {

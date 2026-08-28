@@ -429,6 +429,15 @@ function handleIncomingWebhook(data) {
 
     const instName = data.instance || data._instance || 'unknown';
     let contact = CONTACTS.find(c => c.phone === phone && c.instance === instName);
+    
+    // Fallback: buscar pelos últimos 8 dígitos (ignora diferença de 11/12 dígitos BR)
+    if (!contact && phone && phone.length >= 8) {
+      const phoneSuffix = phone.slice(-8);
+      contact = CONTACTS.find(c => c.instance === instName && c.phone && c.phone.slice(-8) === phoneSuffix);
+      if (contact) {
+        console.log(`[Webhook] Contato encontrado por sufixo: ${contact.phone} ~ ${phone}`);
+      }
+    }
 
     let type = fromMe ? 'out' : 'in';
 
