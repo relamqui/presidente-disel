@@ -1694,6 +1694,7 @@ def login():
     if user:
         token = jwt.encode({
             'id': user.id,
+            'name': user.name,
             'email': user.email,
             'role': user.role,
             'filial_id': user.filial_id,
@@ -2261,13 +2262,13 @@ def get_instances():
 
 def auto_assign_chat_to_sender(contact, user_data):
     if not user_data: return
-    user_email = user_data.get('email', '')
+    user_name = user_data.get('name') or user_data.get('email', '')
     contact.assigned_to = user_data.get('id')
-    contact.assigned_name = user_email
+    contact.assigned_name = user_name
     
     tags = list(contact.tags or [])
     tags = [t for t in tags if t != 'BOT']
-    at_tag = f"Atendente: {user_email}"
+    at_tag = f"Atendente: {user_name}"
     if at_tag not in tags:
         tags.append(at_tag)
         
@@ -5310,7 +5311,18 @@ def report_motivos_individuais():
         rows = db_sql.session.execute(sql, params).fetchall()
 
         items = []
+        import pytz
+        sp_tz = pytz.timezone('America/Sao_Paulo')
         for row in rows:
+            dt = row[6]
+            if dt:
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=datetime.timezone.utc)
+                dt = dt.astimezone(sp_tz)
+                dt_str = dt.strftime('%d/%m/%Y %H:%M')
+            else:
+                dt_str = ''
+            
             items.append({
                 'id': row[0],
                 'contact_id': row[1],
@@ -5318,7 +5330,7 @@ def report_motivos_individuais():
                 'atendente': row[3] or '',
                 'motivo': row[4] or '',
                 'detalhes': row[5] or '',
-                'criado_em': row[6].strftime('%d/%m/%Y %H:%M') if row[6] else ''
+                'criado_em': dt_str
             })
 
         return jsonify({
@@ -5541,10 +5553,19 @@ def report_tempo_espera_chats():
                 else:
                     str_conversa = "Em atendimento"
 
+            # Converter `inicio` para timezone SP antes de exibir
+            import pytz
+            sp_tz = pytz.timezone('America/Sao_Paulo')
+            if inicio.tzinfo is None:
+                inicio_utc = inicio.replace(tzinfo=dt.timezone.utc)
+            else:
+                inicio_utc = inicio
+            inicio_sp = inicio_utc.astimezone(sp_tz)
+
             data.append({
                 'cliente': cliente,
                 'atendente': atendente,
-                'data_hora': inicio.strftime('%d/%m/%Y %H:%M'),
+                'data_hora': inicio_sp.strftime('%d/%m/%Y %H:%M'),
                 'espera': str_espera,
                 'conversa': str_conversa
             })
