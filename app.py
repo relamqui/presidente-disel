@@ -4308,7 +4308,10 @@ def release_chat(id):
     # Lê motivo e detalhes do payload JSON
     data = request.get_json(silent=True) or {}
     motivo = data.get('motivo')
-    detalhes = data.get('detalhes', '')
+    detalhes = data.get('detalhes', '').strip()
+
+    if motivo and not detalhes:
+        return jsonify({'error': 'O campo de detalhes é obrigatório.'}), 400
 
     if motivo:
         novo_motivo = MotivoFinalizacao(

@@ -2727,7 +2727,13 @@ async function confirmReleaseChat() {
   if (!currentChat) return;
   
   const motivo = document.querySelector('input[name="motivoFinalizacao"]:checked').value;
-  const detalhes = document.getElementById('motivoDetalhes').value;
+  const detalhes = document.getElementById('motivoDetalhes').value.trim();
+  
+  if (!detalhes) {
+    alert('O campo de detalhes é obrigatório.');
+    document.getElementById('motivoDetalhes').focus();
+    return;
+  }
   
   const token = localStorage.getItem('wp_crm_token');
   try {
