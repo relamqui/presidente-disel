@@ -429,7 +429,10 @@ def extract_waha_msg_id(res_data, fallback):
     m_id = res_data.get('id')
     if isinstance(m_id, dict):
         m_id = m_id.get('id')
-    return m_id or res_data.get('key', {}).get('id') or res_data.get('messageId') or fallback
+    raw_id = m_id or res_data.get('key', {}).get('id') or res_data.get('messageId') or fallback
+    if raw_id and '_' in raw_id:
+        return raw_id.split('_')[-1]
+    return raw_id
 
 def get_media_base64(instance, msg_data):
     """Busca mídia da WAHA e salva localmente em data/media/. Retorna base64 se conseguir."""
@@ -3297,6 +3300,9 @@ def webhook():
                 socketio.emit('whatsapp_ack', ack_data, room='admin')
                 return 'OK', 200
             waha_id = payload.get('id', '')
+            if waha_id and '_' in waha_id:
+                waha_id = waha_id.split('_')[-1]
+                
             waha_from = payload.get('from', '')
             waha_to = payload.get('to', '')
             
